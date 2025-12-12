@@ -1,11 +1,28 @@
-import { createContext, useState } from "react";
+import { createContext, useState, useEffect } from "react";
 import type { ReactNode } from "react";
+import axios from "axios";
+
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api";
+
+// Create axios instance outside
+const api = axios.create({
+  baseURL: API_BASE_URL,
+});
 
 interface AuthContextType {
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
-  logout: () => void;
+  login: (
+    email: string,
+    password: string
+  ) => Promise<{ success: boolean; error?: string }>;
+  signup: (
+    email: string,
+    password: string
+  ) => Promise<{ success: boolean; error?: string }>;
+  logout: () => Promise<void>;
   user: { email: string } | null;
+  loading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -13,35 +30,189 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export { AuthContext };
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    const storedUser = localStorage.getItem("user");
-    return !!storedUser;
-  });
-  const [user, setUser] = useState<{ email: string } | null>(() => {
-    const storedUser = localStorage.getItem("user");
-    return storedUser ? JSON.parse(storedUser) : null;
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState<{ email: string } | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Request interceptor to add access token
+  api.interceptors.request.use((config) => {
+    const token = localStorage.getItem("accessToken");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
   });
 
-  const login = async (email: string, password: string): Promise<boolean> => {
-    // Simple mock authentication - in real app, this would call an API
-    if (email && password.length >= 6) {
+  // Response interceptor to handle 401 and refresh token
+  api.interceptors.response.use(
+    (response) => response,
+    async (error) => {
+      if (error.response?.status === 401) {
+        const refreshToken = localStorage.getItem("refreshToken");
+        if (refreshToken) {
+          try {
+            const refreshResponse = await axios.post(
+              `${API_BASE_URL}/refresh`,
+              {
+                refreshToken,
+              }
+            );
+            const { accessToken, refreshToken: newRefreshToken } =
+              refreshResponse.data;
+            localStorage.setItem("accessToken", accessToken);
+            localStorage.setItem("refreshToken", newRefreshToken);
+            // Retry the original request
+            error.config.headers.Authorization = `Bearer ${accessToken}`;
+            return api.request(error.config);
+          } catch {
+            // Refresh failed, clear tokens
+            localStorage.removeItem("accessToken");
+            localStorage.removeItem("refreshToken");
+            localStorage.removeItem("user");
+            setUser(null);
+            setIsAuthenticated(false);
+            return Promise.reject(error);
+          }
+        }
+      }
+      return Promise.reject(error);
+    }
+  );
+
+  useEffect(() => {
+    const initAuth = async () => {
+      const accessToken = localStorage.getItem("accessToken");
+      const refreshToken = localStorage.getItem("refreshToken");
+      const storedUser = localStorage.getItem("user");
+
+      if (accessToken && refreshToken && storedUser) {
+        try {
+          // Try to get profile to verify token
+          await api.get("/profile");
+          setUser(JSON.parse(storedUser));
+          setIsAuthenticated(true);
+        } catch {
+          // Token invalid, try refresh
+          try {
+            const refreshResponse = await axios.post(
+              `${API_BASE_URL}/refresh`,
+              {
+                refreshToken,
+              }
+            );
+            const { accessToken: newAccess, refreshToken: newRefresh } =
+              refreshResponse.data;
+            localStorage.setItem("accessToken", newAccess);
+            localStorage.setItem("refreshToken", newRefresh);
+            await api.get("/profile");
+            setUser(JSON.parse(storedUser));
+            setIsAuthenticated(true);
+          } catch {
+            // Clear tokens
+            localStorage.removeItem("accessToken");
+            localStorage.removeItem("refreshToken");
+            localStorage.removeItem("user");
+          }
+        }
+      }
+      setLoading(false);
+    };
+
+    initAuth();
+  }, []); // api is stable
+
+  const login = async (
+    email: string,
+    password: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const response = await axios.post(`${API_BASE_URL}/signin`, {
+        email,
+        password,
+      });
+      const { accessToken, refreshToken } = response.data;
+      localStorage.setItem("accessToken", accessToken);
+      localStorage.setItem("refreshToken", refreshToken);
       const userData = { email };
+      localStorage.setItem("user", JSON.stringify(userData));
       setUser(userData);
       setIsAuthenticated(true);
-      localStorage.setItem("user", JSON.stringify(userData));
-      return true;
+      return { success: true };
+    } catch (error: unknown) {
+      console.error("Login error:", error);
+      let errorMessage = "Login failed";
+      const axiosError = error as {
+        response?: { status: number; data: { errors?: string[] } };
+      };
+      if (axiosError.response?.status === 400) {
+        errorMessage =
+          axiosError.response.data.errors?.[0] || "Invalid credentials";
+      } else if (axiosError.response?.status === 429) {
+        errorMessage = "Too many attempts, please try again later";
+      } else if (axiosError.response?.status === 500) {
+        errorMessage = "Server error, please try again later";
+      }
+      return { success: false, error: errorMessage };
     }
-    return false;
   };
 
-  const logout = () => {
-    setUser(null);
-    setIsAuthenticated(false);
-    localStorage.removeItem("user");
+  const signup = async (
+    email: string,
+    password: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const response = await axios.post(`${API_BASE_URL}/signup`, {
+        email,
+        password,
+      });
+      const { accessToken, refreshToken } = response.data;
+      localStorage.setItem("accessToken", accessToken);
+      localStorage.setItem("refreshToken", refreshToken);
+      const userData = { email };
+      localStorage.setItem("user", JSON.stringify(userData));
+      setUser(userData);
+      setIsAuthenticated(true);
+      return { success: true };
+    } catch (error: unknown) {
+      console.error("Signup error:", error);
+      let errorMessage = "Signup failed";
+      const axiosError = error as {
+        response?: { status: number; data: { errors?: string[] } };
+      };
+      if (axiosError.response?.status === 400) {
+        errorMessage = axiosError.response.data.errors?.[0] || "Invalid data";
+      } else if (axiosError.response?.status === 429) {
+        errorMessage = "Too many attempts, please try again later";
+      } else if (axiosError.response?.status === 500) {
+        errorMessage = "Server error, please try again later";
+      }
+      return { success: false, error: errorMessage };
+    }
+  };
+
+  const logout = async () => {
+    try {
+      const refreshToken = localStorage.getItem("refreshToken");
+      if (refreshToken) {
+        await axios.post(`${API_BASE_URL}/logout`, {
+          refreshToken,
+        });
+      }
+    } catch (error) {
+      console.error("Logout error:", error);
+    } finally {
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("user");
+      setUser(null);
+      setIsAuthenticated(false);
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, login, logout, user }}>
+    <AuthContext.Provider
+      value={{ isAuthenticated, login, signup, logout, user, loading }}
+    >
       {children}
     </AuthContext.Provider>
   );

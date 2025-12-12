@@ -20,8 +20,9 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useState } from "react";
+import { useActionState } from "react";
+import { toast } from "sonner";
+import { Spinner } from "@/components/ui/spinner";
 
 const formSchema = z
   .object({
@@ -39,10 +40,8 @@ const formSchema = z
   });
 
 export default function SignUp() {
-  const { login } = useAuth();
+  const { signup } = useAuth();
   const navigate = useNavigate();
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -53,17 +52,26 @@ export default function SignUp() {
     },
   });
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
-    setError("");
-    setSuccess("");
-    // For demo purposes, just log in the user after signup
-    const success = await login(values.email, values.password);
-    if (success) {
-      setSuccess("Account created successfully!");
+  const signupAction = async (
+    _prevState: { success: boolean; error?: string },
+    formData: { email: string; password: string }
+  ) => {
+    const result = await signup(formData.email, formData.password);
+    if (result.success) {
+      toast.success("Account created successfully!");
       setTimeout(() => navigate("/dashboard"), 1000);
     } else {
-      setError("Failed to create account");
+      toast.error(result.error || "Failed to create account");
     }
+    return result;
+  };
+
+  const [, dispatch, isPending] = useActionState(signupAction, {
+    success: false,
+  });
+
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    dispatch({ email: values.email, password: values.password });
   }
 
   return (
@@ -74,16 +82,6 @@ export default function SignUp() {
           <CardDescription>
             Create a new account to get started.
           </CardDescription>
-          {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-          {success && (
-            <Alert>
-              <AlertDescription>{success}</AlertDescription>
-            </Alert>
-          )}
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -135,8 +133,15 @@ export default function SignUp() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full">
-                Sign Up
+              <Button type="submit" className="w-full" disabled={isPending}>
+                {isPending ? (
+                  <>
+                    <Spinner className="mr-2" />
+                    Signing Up...
+                  </>
+                ) : (
+                  "Sign Up"
+                )}
               </Button>
             </form>
           </Form>

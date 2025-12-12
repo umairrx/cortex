@@ -1,12 +1,12 @@
 import DashboardLayout from "@/components/DashboardLayout";
 import PageHeader from "@/components/PageHeader";
 
-export default function Dashboard() {
+export default function MediaLibrary() {
   return (
     <DashboardLayout>
       <PageHeader
-        title="Dashboard"
-        description="Welcome to the Cortex CMS dashboard."
+        title="Media Library"
+        description="Manage your media files here."
       />
     </DashboardLayout>
   );

@@ -20,8 +20,9 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useState } from "react";
+import { useActionState } from "react";
+import { toast } from "sonner";
+import { Spinner } from "@/components/ui/spinner";
 
 const formSchema = z.object({
   email: z.string().email({
@@ -36,7 +37,6 @@ export default function SignIn() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [error, setError] = useState("");
 
   const from = location.state?.from?.pathname || "/dashboard";
 
@@ -48,14 +48,26 @@ export default function SignIn() {
     },
   });
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
-    setError("");
-    const success = await login(values.email, values.password);
-    if (success) {
+  const loginAction = async (
+    _prevState: { success: boolean; error?: string },
+    formData: { email: string; password: string }
+  ) => {
+    const result = await login(formData.email, formData.password);
+    if (result.success) {
+      toast.success("Signed in successfully!");
       navigate(from, { replace: true });
     } else {
-      setError("Invalid email or password");
+      toast.error(result.error || "Invalid email or password");
     }
+    return result;
+  };
+
+  const [, dispatch, isPending] = useActionState(loginAction, {
+    success: false,
+  });
+
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    dispatch({ email: values.email, password: values.password });
   }
 
   return (
@@ -66,11 +78,6 @@ export default function SignIn() {
           <CardDescription>
             Enter your credentials to access your account.
           </CardDescription>
-          {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -105,8 +112,15 @@ export default function SignIn() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full">
-                Sign In
+              <Button type="submit" className="w-full" disabled={isPending}>
+                {isPending ? (
+                  <>
+                    <Spinner className="mr-2" />
+                    Signing In...
+                  </>
+                ) : (
+                  "Sign In"
+                )}
               </Button>
             </form>
           </Form>

@@ -1,12 +1,12 @@
 import DashboardLayout from "@/components/DashboardLayout";
 import PageHeader from "@/components/PageHeader";
 
-export default function Dashboard() {
+export default function ContentManager() {
   return (
     <DashboardLayout>
       <PageHeader
-        title="Dashboard"
-        description="Welcome to the Cortex CMS dashboard."
+        title="Content Manager"
+        description="Manage your content here."
       />
     </DashboardLayout>
   );

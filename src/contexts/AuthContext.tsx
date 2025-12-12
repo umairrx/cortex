@@ -29,6 +29,13 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export { AuthContext };
 
+/**
+ * Provider component that manages authentication state and provides auth-related functions.
+ * Handles login, signup, logout, and token refresh logic.
+ *
+ * @param children - The child components to render within the provider.
+ * @returns The AuthContext provider wrapping the children.
+ */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<{ email: string } | null>(null);
@@ -80,6 +87,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   useEffect(() => {
+    /**
+     * Initializes authentication state on component mount.
+     * Checks for stored tokens and user data, verifies them, and sets auth state.
+     */
     const initAuth = async () => {
       const accessToken = localStorage.getItem("accessToken");
       const refreshToken = localStorage.getItem("refreshToken");
@@ -121,6 +132,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     initAuth();
   }, []); // api is stable
 
+  /**
+   * Logs in a user with email and password.
+   * Stores tokens and user data in localStorage and updates state.
+   *
+   * @param email - The user's email address.
+   * @param password - The user's password.
+   * @returns An object with success status and optional error message.
+   */
   const login = async (
     email: string,
     password: string
@@ -156,6 +175,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  /**
+   * Signs up a new user with email and password.
+   * Stores tokens and user data in localStorage and updates state.
+   *
+   * @param email - The user's email address.
+   * @param password - The user's password.
+   * @returns An object with success status and optional error message.
+   */
   const signup = async (
     email: string,
     password: string
@@ -190,6 +217,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  /**
+   * Logs out the current user.
+   * Sends a logout request to the server and clears local storage and state.
+   *
+   * @returns A promise that resolves when logout is complete.
+   */
   const logout = async () => {
     try {
       const refreshToken = localStorage.getItem("refreshToken");

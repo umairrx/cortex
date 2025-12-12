@@ -52,6 +52,14 @@ export default function SignUp() {
     },
   });
 
+  /**
+   * Handles the signup action for form submission.
+   * Calls the signup function from auth context and handles success/error responses.
+   *
+   * @param _prevState - The previous state (unused).
+   * @param formData - The form data containing email and password.
+   * @returns The result of the signup operation.
+   */
   const signupAction = async (
     _prevState: { success: boolean; error?: string },
     formData: { email: string; password: string }
@@ -70,6 +78,12 @@ export default function SignUp() {
     success: false,
   });
 
+  /**
+   * Handles form submission for signup.
+   * Dispatches the signup action with form values.
+   *
+   * @param values - The validated form values.
+   */
   async function onSubmit(values: z.infer<typeof formSchema>) {
     dispatch({ email: values.email, password: values.password });
   }

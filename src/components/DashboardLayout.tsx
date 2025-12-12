@@ -14,6 +14,13 @@ interface DashboardLayoutProps {
   children: ReactNode;
 }
 
+/**
+ * Layout component that provides the consistent structure for all dashboard pages.
+ * Includes the sidebar with user data, header controls, and main content area.
+ *
+ * @param children - The page-specific content to render in the main area
+ * @returns A complete dashboard layout with sidebar and header
+ */
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const userData = useUserData();
 

@@ -1,5 +1,9 @@
 import { IconFileText, IconHome, IconPhoto, IconSettings, IconApi } from "@tabler/icons-react";
 
+/**
+ * Navigation items configuration for the main sidebar menu.
+ * Each item contains the display title, URL route, and associated icon.
+ */
 export const navigationItems = [
   {
     title: "Home",

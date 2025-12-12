@@ -48,6 +48,14 @@ export default function SignIn() {
     },
   });
 
+  /**
+   * Handles the login action for form submission.
+   * Calls the login function from auth context and handles success/error responses.
+   *
+   * @param _prevState - The previous state (unused).
+   * @param formData - The form data containing email and password.
+   * @returns The result of the login operation.
+   */
   const loginAction = async (
     _prevState: { success: boolean; error?: string },
     formData: { email: string; password: string }
@@ -66,6 +74,12 @@ export default function SignIn() {
     success: false,
   });
 
+  /**
+   * Handles form submission for signin.
+   * Dispatches the login action with form values.
+   *
+   * @param values - The validated form values.
+   */
   async function onSubmit(values: z.infer<typeof formSchema>) {
     dispatch({ email: values.email, password: values.password });
   }

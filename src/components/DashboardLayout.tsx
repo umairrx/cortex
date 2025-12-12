@@ -27,9 +27,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
     <SidebarProvider>
       <AppSidebar user={userData} />
-      <SidebarInset>
+      <SidebarInset className="max-h-screen overflow-hidden">
         <SidebarHeader>
-          <div className="flex w-full justify-between items-center">
+          <div className="flex w-full justify-between items-center ">
             <SidebarTrigger />
             <div className="flex gap-3">
               <FontSelector />

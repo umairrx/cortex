@@ -1,8 +1,8 @@
 import * as React from "react";
-import { IconCode } from "@tabler/icons-react";
 
 import { NavMain } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
+import { useTheme } from "@/components/use-theme";
 import {
   Sidebar,
   SidebarContent,
@@ -14,12 +14,16 @@ import {
 } from "@/components/ui/sidebar";
 import { navigationItems } from "@/config/navigation";
 
+import whiteLogo from "@/assets/white-logo.svg";
+import blackLogo from "@/assets/black-logo.svg";
+
 export function AppSidebar({
   user,
   ...props
 }: React.ComponentProps<typeof Sidebar> & {
   user?: { name: string; email: string; avatar: string };
 }) {
+  const { theme } = useTheme();
   const defaultUser = {
     name: "User",
     email: "user@example.com",
@@ -27,6 +31,8 @@ export function AppSidebar({
   };
 
   const userData = user || defaultUser;
+
+  const logoSrc = theme === "dark" ? whiteLogo : blackLogo;
 
   return (
     <Sidebar collapsible="offcanvas" {...props}>
@@ -37,9 +43,13 @@ export function AppSidebar({
               asChild
               className="data-[slot=sidebar-menu-button]:p-1.5!"
             >
-              <a href="#">
-                <IconCode className="size-5!" />
-                <span>Cortex CMS</span>
+              <a href="#" className="flex items-center gap-2">
+                <img
+                  src={logoSrc}
+                  alt="Cortex CMS Logo"
+                  className="h-8 w-auto animate-[spin_3s_linear_infinite]"
+                />
+                <span className="font-semibold">Cortex CMS</span>
               </a>
             </SidebarMenuButton>
           </SidebarMenuItem>

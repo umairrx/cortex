@@ -21,8 +21,8 @@ export const navigationItems = [
     icon: IconPhoto,
   },
   {
-    title: "Content Type Builder",
-    url: "/content-type-builder",
+    title: "Collection Types Builder",
+    url: "/collection-types-builder",
     icon: IconSettings,
   },
   {

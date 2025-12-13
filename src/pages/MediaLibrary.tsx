@@ -1,10 +1,10 @@
 import { Upload } from "lucide-react";
 import { useRef, useState } from "react";
-import DashboardLayout from "@/components/DashboardLayout";
 import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import DashboardLayout from "@/layouts/DashboardLayout";
 import { cn } from "@/lib/utils";
 
 /**

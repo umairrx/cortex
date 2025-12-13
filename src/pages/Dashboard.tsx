@@ -6,7 +6,6 @@ import {
 	Layers,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import DashboardLayout from "@/components/DashboardLayout";
 import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,6 +18,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useCollections } from "@/contexts/CollectionsContext";
+import DashboardLayout from "@/layouts/DashboardLayout";
 
 export default function Dashboard() {
 	const { collections } = useCollections();
@@ -88,7 +88,7 @@ export default function Dashboard() {
 						</CardHeader>
 						<Separator />
 						<CardContent>
-							<ScrollArea className="h-[300px] w-full pr-4">
+							<ScrollArea className="h-75 w-full pr-4">
 								<div className="space-y-8 p-4">
 									{/* Placeholder for activity feed */}
 									<div className="flex items-center">
@@ -116,7 +116,7 @@ export default function Dashboard() {
 						</CardHeader>
 						<Separator />
 						<CardContent>
-							<ScrollArea className="h-[300px] w-full">
+							<ScrollArea className="h-75 w-full">
 								<div className="p-4 space-y-4">
 									{collections.map((collection, index) => (
 										<div key={collection.id}>

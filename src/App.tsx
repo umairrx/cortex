@@ -18,6 +18,7 @@ import { CollectionsProvider } from "./contexts/CollectionsContext.tsx";
 import ApiIntegration from "./pages/ApiIntegration.tsx";
 import CollectionTypesBuilder from "./pages/CollectionTypesBuilder.tsx";
 import CollectionWrapper from "./pages/CollectionWrapper.tsx";
+import ContentCreate from "./pages/ContentCreate.tsx";
 import ContentManager from "./pages/ContentManager.tsx";
 import CreateCollection from "./pages/CreateCollection.tsx";
 import Dashboard from "./pages/Dashboard.tsx";
@@ -79,6 +80,14 @@ function AppContent() {
 						element={
 							<ProtectedRoute>
 								<ContentManager />
+							</ProtectedRoute>
+						}
+					/>
+					<Route
+						path="/content-manager/:collectionId/create"
+						element={
+							<ProtectedRoute>
+								<ContentCreate />
 							</ProtectedRoute>
 						}
 					/>

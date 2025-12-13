@@ -1,10 +1,10 @@
 import { Briefcase, Database, Newspaper, PlusCircle } from "lucide-react";
 import { Link, Outlet } from "react-router-dom";
 import CollectionBuilderLayout from "@/components/CollectionBuilderLayout";
-import DashboardLayout from "@/components/DashboardLayout";
 import PageHeader from "@/components/PageHeader";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCollections } from "@/contexts/CollectionsContext";
+import DashboardLayout from "@/layouts/DashboardLayout";
 
 /**
  * Collection Types Builder page component for defining and managing collection types.

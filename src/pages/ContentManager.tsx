@@ -11,7 +11,8 @@ import {
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import DashboardLayout from "@/components/DashboardLayout";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { EmptyState } from "@/components/EmptyState";
 import { FieldRenderer } from "@/components/fields/FieldRenderer";
 import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,7 @@ import {
 	useItemsQuery,
 	useUpdateItemMutation,
 } from "@/hooks/tanstack/useItems";
+import DashboardLayout from "@/layouts/DashboardLayout";
 import { getFieldType } from "@/types/fields";
 import type { Collection } from "@/types/types";
 
@@ -50,13 +52,6 @@ export default function ContentManager() {
 		Record<string, string | string[] | number | boolean | null | undefined>
 	>({});
 	const [errors, setErrors] = useState<Record<string, string>>({});
-
-	const handleCreateContent = () => {
-		setFormData({});
-		setErrors({});
-		setEditingItem(null);
-		setIsEditing(true);
-	};
 
 	const handleEditContent = (item: Item) => {
 		setFormData(item.data);
@@ -134,15 +129,22 @@ export default function ContentManager() {
 		}
 	};
 
-	const handleDeleteContent = async (itemId: string) => {
-		if (confirm("Are you sure you want to delete this item?")) {
-			try {
-				await deleteItemMutation.mutateAsync(itemId);
-				toast.success("Item deleted");
-			} catch (error) {
-				console.error("Failed to delete item", error);
-				toast.error("Failed to delete item");
-			}
+	const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+
+	const handleDeleteContent = (itemId: string) => {
+		setItemToDelete(itemId);
+	};
+
+	const confirmDelete = async () => {
+		if (!itemToDelete) return;
+		try {
+			await deleteItemMutation.mutateAsync(itemToDelete);
+			toast.success("Item deleted");
+		} catch (error) {
+			console.error("Failed to delete item", error);
+			toast.error("Failed to delete item");
+		} finally {
+			setItemToDelete(null);
 		}
 	};
 
@@ -191,15 +193,12 @@ export default function ContentManager() {
 					</div>
 
 					{collections.length === 0 ? (
-						<div className="px-5 py-8 text-center">
-							<Database className="size-12 mx-auto text-muted-foreground mb-4" />
-							<h3 className="text-sm font-medium text-muted-foreground mb-2">
-								No Types Exist
-							</h3>
-							<p className="text-xs text-muted-foreground">
-								Create your first collection type to get started.
-							</p>
-						</div>
+						<EmptyState
+							icon={Database}
+							title="No Types Exist"
+							description="Create your first collection type to get started."
+							className="py-8"
+						/>
 					) : (
 						contentSidebar
 							.filter((section) => section.items.length > 0)
@@ -257,16 +256,20 @@ export default function ContentManager() {
 									</div>
 									{!isEditing && (
 										<Button
-											onClick={handleCreateContent}
+											asChild
 											disabled={
 												selectedCollection.type === "single" &&
 												contentItems.length > 0
 											}
 										>
-											<Plus className="h-4 w-4 mr-2" />
-											{selectedCollection.type === "collection"
-												? "Add Entry"
-												: "Create Content"}
+											<Link
+												to={`/content-manager/${selectedCollection.id}/create`}
+											>
+												<Plus className="h-4 w-4 mr-2" />
+												{selectedCollection.type === "collection"
+													? "Add Entry"
+													: "Create Content"}
+											</Link>
 										</Button>
 									)}
 								</div>
@@ -331,14 +334,12 @@ export default function ContentManager() {
 									<h2 className="text-lg font-semibold">Content Entries</h2>
 									{contentItems.length === 0 ? (
 										<Card>
-											<CardContent className="flex flex-col items-center justify-center py-12">
-												<FileText className="h-12 w-12 text-muted-foreground mb-4" />
-												<h3 className="text-lg font-medium text-muted-foreground mb-2">
-													No Content Yet
-												</h3>
-												<p className="text-sm text-muted-foreground text-center">
-													Create your first content entry for this collection.
-												</p>
+											<CardContent className="h-64">
+												<EmptyState
+													icon={FileText}
+													title="No Content Yet"
+													description="Create your first content entry for this collection."
+												/>
 											</CardContent>
 										</Card>
 									) : (
@@ -387,16 +388,12 @@ export default function ContentManager() {
 									<h2 className="text-lg font-semibold">Content Entry</h2>
 									{contentItems.length === 0 ? (
 										<Card>
-											<CardContent className="p-6">
-												<div className="text-center mb-4">
-													<FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-													<h3 className="text-lg font-medium text-muted-foreground mb-2">
-														No Content Yet
-													</h3>
-													<p className="text-sm text-muted-foreground">
-														Create content for this single type.
-													</p>
-												</div>
+											<CardContent className="h-64">
+												<EmptyState
+													icon={FileText}
+													title="No Content Yet"
+													description="Create content for this single type."
+												/>
 											</CardContent>
 										</Card>
 									) : (
@@ -450,20 +447,24 @@ export default function ContentManager() {
 							)}
 						</div>
 					) : (
-						<div className="flex items-center justify-center h-full">
-							<div className="text-center">
-								<Database className="size-16 mx-auto text-muted-foreground mb-4" />
-								<h3 className="text-lg font-medium text-muted-foreground mb-2">
-									No Collection Selected
-								</h3>
-								<p className="text-sm text-muted-foreground">
-									Select a collection from the sidebar to manage content.
-								</p>
-							</div>
-						</div>
+						<EmptyState
+							icon={Database}
+							title="No Collection Selected"
+							description="Select a collection from the sidebar to manage content."
+						/>
 					)}
 				</div>
 			</div>
+			<ConfirmDialog
+				open={!!itemToDelete}
+				onOpenChange={(open) => !open && setItemToDelete(null)}
+				title="Delete Item"
+				description="Are you sure you want to delete this item? This action cannot be undone."
+				confirmLabel="Delete"
+				onConfirm={confirmDelete}
+				isLoading={deleteItemMutation.isPending}
+				variant="destructive"
+			/>
 		</DashboardLayout>
 	);
 }

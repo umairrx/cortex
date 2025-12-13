@@ -1,16 +1,9 @@
 import { Briefcase, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { EmptyState } from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useCollections } from "@/contexts/CollectionsContext";
 import CollectionTypesHeader from "./CollectionTypesHeader";
@@ -89,39 +82,20 @@ const SingleCollectionBuilds = () => {
 				</div>
 			</div>
 
-			<Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-				<DialogContent>
-					<DialogHeader>
-						<DialogTitle>Delete Collection</DialogTitle>
-						<DialogDescription>
-							This action cannot be undone. All data associated with this
-							collection will be permanently removed.
-						</DialogDescription>
-					</DialogHeader>
-					<div className="space-y-2">
-						<p>
-							Are you sure you want to delete the collection "{collection.name}
-							"? This action cannot be undone.
-						</p>
-					</div>
-					<DialogFooter>
-						<Button variant="ghost" onClick={() => setShowDeleteDialog(false)}>
-							Cancel
-						</Button>
-						<Button
-							variant="destructive"
-							onClick={() => {
-								if (id) {
-									deleteCollection(id);
-									navigate("/collection-types-builder");
-								}
-							}}
-						>
-							Delete
-						</Button>
-					</DialogFooter>
-				</DialogContent>
-			</Dialog>
+			<ConfirmDialog
+				open={showDeleteDialog}
+				onOpenChange={setShowDeleteDialog}
+				title="Delete Collection"
+				description={`Are you sure you want to delete the collection "${collection.name}"? This action cannot be undone. All data associated with this collection will be permanently removed.`}
+				confirmLabel="Delete"
+				onConfirm={() => {
+					if (id) {
+						deleteCollection(id);
+						navigate("/collection-types-builder");
+					}
+				}}
+				variant="destructive"
+			/>
 		</TooltipProvider>
 	);
 };

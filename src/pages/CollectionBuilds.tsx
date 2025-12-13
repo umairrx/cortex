@@ -1,37 +1,22 @@
 import {
-	closestCenter,
-	DndContext,
-	type DragEndEvent,
-	KeyboardSensor,
-	PointerSensor,
-	useSensor,
-	useSensors,
-} from "@dnd-kit/core";
-import {
-	arrayMove,
-	SortableContext,
-	sortableKeyboardCoordinates,
-	useSortable,
-	verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-import {
 	Calendar,
 	Edit,
 	FileText,
-	GripVertical,
-	Image as ImageIcon,
-	Trash2,
-	ToggleLeft,
-	Hash,
 	Globe,
+	Hash,
+	Image as ImageIcon,
 	Palette,
+	ToggleLeft,
+	Trash2,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
+import CollectionBuilderLayout from "@/components/CollectionBuilderLayout";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { EmptyState } from "@/components/EmptyState";
 import FieldCard from "@/components/FieldCard";
+import { SortableFieldList } from "@/components/SortableFieldList";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -47,7 +32,9 @@ import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useCollections } from "@/contexts/CollectionsContext";
+import { useFieldManagement } from "@/hooks/useFieldManagement";
 import { FIELD_TYPES } from "@/types/fields";
+import type { CollectionField } from "@/types/types";
 import CollectionTypesHeader from "./CollectionTypesHeader";
 
 /**
@@ -138,6 +125,13 @@ const RESERVED_WORDS = new Set([
 	"state",
 ]);
 
+/**
+ * Normalizes a field name to camelCase format.
+ * Transforms spaces, hyphens, and underscores to standard camelCase.
+ *
+ * @param name - The input string to normalize
+ * @returns The camelCase version of the input string
+ */
 const normalizeToCamelCase = (name: string): string => {
 	return name
 		.split(/[_\s-]+/)
@@ -148,6 +142,13 @@ const normalizeToCamelCase = (name: string): string => {
 		.join("");
 };
 
+/**
+ * Validates a field name against specific rules.
+ * Checks for empty values, invalid characters, starting numbers, and reserved words.
+ *
+ * @param name - The field name to validate
+ * @returns An error message string if invalid, or an empty string if valid
+ */
 const validateFieldName = (name: string): string => {
 	if (!name.trim()) return "Field name is required";
 	const trimmed = name.trim();
@@ -177,12 +178,12 @@ export interface FieldType {
 	maxLength?: number;
 }
 
-interface CollectionField {
-	field_name: string;
-	type: string;
-	label: string;
-}
-
+/**
+ * Component for managing fields of an existing collection.
+ * Allows adding, removing, and reordering fields in a collection type.
+ *
+ * @returns The collection build interface
+ */
 const CollectionBuilds = () => {
 	const { id } = useParams<{ id: string }>();
 	const { collections, updateCollection, deleteCollection } = useCollections();
@@ -192,30 +193,19 @@ const CollectionBuilds = () => {
 		Record<string, string>
 	>({});
 
-	const sensors = useSensors(
-		useSensor(PointerSensor),
-		useSensor(KeyboardSensor, {
-			coordinateGetter: sortableKeyboardCoordinates,
-		}),
-	);
-
 	const [search, setSearch] = useState("");
 	const [currentFieldsSearch, setCurrentFieldsSearch] = useState("");
-	const [fieldBeingAdded, setFieldBeingAdded] = useState<{
-		fieldName: string;
-		type: string;
-		field_name: string;
-	} | null>(null);
-
-	const [showFieldNameDialog, setShowFieldNameDialog] = useState(false);
-	const [fieldNameError, setFieldNameError] = useState<string>("");
 	const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
 	const collection = id ? collections.find((c) => c.id === id) : null;
-	const currentFields = collection?.fields || [];
-
 	const collectionFields = FIELD_TYPES;
 
+	/**
+	 * Retrieves the human-readable label for a given field type.
+	 *
+	 * @param type - The field type identifier
+	 * @returns The display name for the field type
+	 */
 	const getMainFieldName = (type: string) => {
 		for (const field of collectionFields) {
 			if (field.types.some((t) => t.type === type)) {
@@ -223,6 +213,93 @@ const CollectionBuilds = () => {
 			}
 		}
 		return type;
+	};
+
+	const initialFields = collection?.fields.map((f) => f.field_name) || [];
+	const initialTypes =
+		collection?.fields.reduce(
+			(acc, f) => {
+				acc[f.field_name] = f.type;
+				return acc;
+			},
+			{} as Record<string, string>,
+		) || {};
+
+	/**
+	 * Persists changes to the collection fields to the backend.
+	 * Updates the collection definition with the new field configuration.
+	 *
+	 * @param fields - The list of field names
+	 * @param types - The map of field name to type
+	 */
+	const persistChanges = async (
+		fields: string[],
+		types: Record<string, string>,
+	) => {
+		if (!collection) return;
+
+		const newFields: CollectionField[] = fields.map((name) => ({
+			field_name: name,
+			type: types[name],
+			label: getMainFieldName(types[name]),
+		}));
+
+		try {
+			await updateCollection(collection.id, {
+				...collection,
+				fields: newFields,
+			});
+		} catch (error) {
+			console.error("Auto-save failed:", error);
+			toast.error("Failed to save changes.");
+		}
+	};
+
+	const {
+		selectedFields,
+		selectedTypes,
+		setSelectedFields,
+		setSelectedTypes,
+		fieldBeingAdded,
+		setFieldBeingAdded,
+		showFieldNameDialog,
+		setShowFieldNameDialog,
+		fieldNameError,
+		setFieldNameError,
+		sensors,
+		handleDragEnd,
+		addSelectedFieldRequest: hookAddRequest,
+		addSelectedField,
+		removeSelectedField,
+	} = useFieldManagement({
+		initialFields,
+		initialTypes,
+		collectionType: collection?.type,
+		onFieldsChange: persistChanges,
+	});
+
+	useEffect(() => {
+		if (collection) {
+			setSelectedFields(collection.fields.map((f) => f.field_name));
+			setSelectedTypes(
+				collection.fields.reduce(
+					(acc, f) => {
+						acc[f.field_name] = f.type;
+						return acc;
+					},
+					{} as Record<string, string>,
+				),
+			);
+		}
+	}, [collection, setSelectedFields, setSelectedTypes]);
+
+	const handleSidebarTypeSelect = (groupName: string, type: string) => {
+		setSidebarSelections((prev) => ({ ...prev, [groupName]: type }));
+	};
+
+	const addSelectedFieldRequest = (groupName: string, type: string) => {
+		setSidebarSelections((prev) => ({ ...prev, [groupName]: type }));
+		hookAddRequest(groupName, type);
 	};
 
 	const getIcon = (iconName: string) => {
@@ -248,100 +325,12 @@ const CollectionBuilds = () => {
 		}
 	};
 
-	/**
-	 * Persist changes to the database immediately.
-	 */
-	const persistCollectionUpdate = async (newFields: CollectionField[]) => {
-		if (!collection) return;
-
-		const updatedCollection = {
-			id: collection.id,
-			name: collection.name,
-			singular: collection.singular,
-			plural: collection.plural,
-			type: collection.type,
-			fields: newFields,
-		};
-
-		try {
-			await updateCollection(collection.id, updatedCollection);
-		} catch (error) {
-			console.error("Auto-save failed:", error);
-			toast.error("Failed to save changes.");
-		}
-	};
-
-	const handleSidebarTypeSelect = (groupName: string, type: string) => {
-		setSidebarSelections((prev) => ({ ...prev, [groupName]: type }));
-	};
-
-	const addSelectedFieldRequest = (groupName: string, type: string) => {
-		if (collection?.type === "single" && currentFields.length >= 1) {
-			toast.error("Single types can only have one field.");
-			return;
-		}
-
-		setSidebarSelections((prev) => ({ ...prev, [groupName]: type }));
-		setFieldBeingAdded({ fieldName: groupName, type, field_name: "" });
-		setFieldNameError("");
-		setShowFieldNameDialog(true);
-	};
-
-	const addSelectedField = async (type: string, field_name: string) => {
-		if (currentFields.some((f) => f.field_name === field_name)) {
-			toast.error("Field already exists.");
-			return;
-		}
-
-		if (collection?.type === "single" && currentFields.length >= 1) {
-			toast.error("Single types can only have one field.");
-			return;
-		}
-
-		const newField: CollectionField = {
-			field_name,
-			type,
-			label: getMainFieldName(type),
-		};
-
-		const newFields = [...currentFields, newField];
-
-		await persistCollectionUpdate(newFields);
-		toast.success(`Field "${field_name}" added.`);
-
-		setFieldBeingAdded(null);
-		setShowFieldNameDialog(false);
-	};
-
-	const removeField = async (field_name: string) => {
-		const newFields = currentFields.filter((f) => f.field_name !== field_name);
-		await persistCollectionUpdate(newFields);
-		toast.success(`Field "${field_name}" removed.`);
-	};
-
-	const handleDragEnd = async (event: DragEndEvent) => {
-		const { active, over } = event;
-
-		if (over && active.id !== over.id) {
-			const oldIndex = currentFields.findIndex(
-				(f) => f.field_name === active.id,
-			);
-			const newIndex = currentFields.findIndex((f) => f.field_name === over.id);
-
-			const newFields = arrayMove(currentFields, oldIndex, newIndex);
-
-			await persistCollectionUpdate(newFields);
-		}
-	};
-
 	const filteredFields = collectionFields.filter((field) =>
 		field.name.toLowerCase().includes(search.toLowerCase()),
 	);
 
-	const filteredCurrentFields = currentFields.filter(
-		(f) =>
-			f.field_name.toLowerCase().includes(currentFieldsSearch.toLowerCase()) ||
-			f.label.toLowerCase().includes(currentFieldsSearch.toLowerCase()),
+	const filteredCurrentFields = selectedFields.filter((field_name) =>
+		field_name.toLowerCase().includes(currentFieldsSearch.toLowerCase()),
 	);
 
 	if (!collection) {
@@ -354,60 +343,9 @@ const CollectionBuilds = () => {
 		);
 	}
 
-	const SortableItem = ({
-		field,
-		onRemove,
-	}: {
-		field: CollectionField;
-		onRemove: (name: string) => void;
-	}) => {
-		const { attributes, listeners, setNodeRef, transform, transition } =
-			useSortable({ id: field.field_name });
-
-		const style = {
-			transform: CSS.Transform.toString(transform),
-			transition,
-		};
-
-		return (
-			<div
-				ref={setNodeRef}
-				style={style}
-				{...attributes}
-				className="flex items-center justify-between p-3 border rounded bg-muted/50"
-			>
-				<div className="flex items-center gap-3">
-					<button
-						type="button"
-						{...listeners}
-						{...attributes}
-						aria-label="Drag field"
-						className="cursor-move touch-none p-1 bg-transparent"
-						style={{ touchAction: "none" }}
-					>
-						<GripVertical className="h-5 w-5 text-primary" />
-					</button>
-					<div>
-						<div className="text-sm font-medium">{field.field_name}</div>
-						<div className="text-xs text-muted-foreground">
-							{field.label} - {field.type}
-						</div>
-					</div>
-				</div>
-				<Button
-					variant="ghost"
-					size="sm"
-					onClick={() => onRemove(field.field_name)}
-				>
-					Remove
-				</Button>
-			</div>
-		);
-	};
-
 	return (
 		<TooltipProvider>
-			<div className="flex w-full justify-between">
+			<CollectionBuilderLayout>
 				<div className="w-1/2 py-3 border-r flex flex-col h-full overflow-hidden">
 					<div className="flex-none">
 						<CollectionTypesHeader
@@ -424,45 +362,32 @@ const CollectionBuilds = () => {
 							}
 						/>
 					</div>
-				
-						<div className="px-4 py-3 space-y-4">
-							<Input
-								placeholder="Search current fields..."
-								value={currentFieldsSearch}
-								onChange={(e) => setCurrentFieldsSearch(e.target.value)}
-								className="mb-4"
-							/>
-							{filteredCurrentFields.length === 0 ? (
-								<div className="text-sm text-muted-foreground">
-									{currentFields.length === 0
-										? "No fields configured."
-										: "No matching fields found."}
-								</div>
-							) : (
-								<DndContext
+
+					<div className="px-4 py-3 space-y-4">
+						<Input
+							placeholder="Search current fields..."
+							value={currentFieldsSearch}
+							onChange={(e) => setCurrentFieldsSearch(e.target.value)}
+							className="mb-4"
+						/>
+						{filteredCurrentFields.length === 0 ? (
+							<div className="text-sm text-muted-foreground">
+								{selectedFields.length === 0
+									? "No fields configured."
+									: "No matching fields found."}
+							</div>
+						) : (
+							<div className="h-[calc(100vh-200px)] w-full py-2 min-h-0 overflow-auto bg-background px-2 border">
+								<SortableFieldList
+									selectedFields={filteredCurrentFields}
+									selectedTypes={selectedTypes}
+									removeSelectedField={removeSelectedField}
+									handleDragEnd={handleDragEnd}
 									sensors={sensors}
-									collisionDetection={closestCenter}
-									onDragEnd={handleDragEnd}
-								>
-										<ScrollArea className="h-[calc(100vh-200px)] w-full py-2 min-h-0 overflow-auto bg-background px-2 border">
-											<SortableContext
-												items={filteredCurrentFields.map((f) => f.field_name)}
-												strategy={verticalListSortingStrategy}
-											>
-												<div className="space-y-3">
-													{filteredCurrentFields.map((field) => (
-												<SortableItem
-													key={field.field_name}
-													field={field}
-													onRemove={removeField}
-												/>
-											))}
-										</div>
-									</SortableContext>
-									</ScrollArea>
-								</DndContext>
-							)}
-						</div>
+								/>
+							</div>
+						)}
+					</div>
 				</div>
 				<div className="w-1/2 py-3 flex flex-col h-full overflow-hidden">
 					<div className="flex-none">
@@ -471,14 +396,14 @@ const CollectionBuilds = () => {
 							tagline="Select additional fields to add to this collection"
 						/>
 					</div>
-						<div className="px-4 py-3 space-y-4">
-							<Input
-								placeholder="Search fields..."
-								value={search}
-								onChange={(e) => setSearch(e.target.value)}
-								className="mb-4"
-							/>
-					<ScrollArea className="h-[calc(100vh-200px)] w-full py-2 min-h-0 overflow-auto bg-background px-2 border">
+					<div className="px-4 py-3 space-y-4">
+						<Input
+							placeholder="Search fields..."
+							value={search}
+							onChange={(e) => setSearch(e.target.value)}
+							className="mb-4"
+						/>
+						<ScrollArea className="h-[calc(100vh-200px)] w-full py-2 min-h-0 overflow-auto bg-background px-2 border">
 							{filteredFields.map((fieldGroup) => (
 								<FieldCard
 									key={fieldGroup.name}
@@ -489,44 +414,25 @@ const CollectionBuilds = () => {
 									onAdd={addSelectedFieldRequest}
 								/>
 							))}
-					</ScrollArea>
-						</div>
-				</div>
-			</div>
-
-			<Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-				<DialogContent>
-					<DialogHeader>
-						<DialogTitle>Delete Collection</DialogTitle>
-						<DialogDescription>
-							This action cannot be undone. All data associated with this
-							collection will be permanently removed.
-						</DialogDescription>
-					</DialogHeader>
-					<div className="space-y-2">
-						<p>
-							Are you sure you want to delete the collection "{collection.name}
-							"? This action cannot be undone.
-						</p>
+						</ScrollArea>
 					</div>
-					<DialogFooter>
-						<Button variant="ghost" onClick={() => setShowDeleteDialog(false)}>
-							Cancel
-						</Button>
-						<Button
-							variant="destructive"
-							onClick={() => {
-								if (id) {
-									deleteCollection(id);
-									navigate("/collection-types-builder");
-								}
-							}}
-						>
-							Delete
-						</Button>
-					</DialogFooter>
-				</DialogContent>
-			</Dialog>
+				</div>
+			</CollectionBuilderLayout>
+
+			<ConfirmDialog
+				open={showDeleteDialog}
+				onOpenChange={setShowDeleteDialog}
+				title="Delete Collection"
+				description={`Are you sure you want to delete the collection "${collection.name}"? This action cannot be undone. All data associated with this collection will be permanently removed.`}
+				confirmLabel="Delete"
+				onConfirm={() => {
+					if (id) {
+						deleteCollection(id);
+						navigate("/collection-types-builder");
+					}
+				}}
+				variant="destructive"
+			/>
 
 			<Dialog open={showFieldNameDialog} onOpenChange={setShowFieldNameDialog}>
 				<DialogContent>

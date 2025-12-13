@@ -7,28 +7,7 @@ import {
 	useUpdateCollectionMutation,
 } from "@/hooks/tanstack/useCollections";
 
-/**
- * Represents a field in a collection.
- */
-interface CollectionField {
-	field_name: string;
-	type: string;
-	label: string;
-}
-
-/**
- * Represents a collection with its metadata and fields.
- */
-interface Collection {
-	id: string;
-	name: string;
-	singular: string;
-	plural: string;
-	type: "collection" | "single";
-	fields: CollectionField[];
-	createdAt: string;
-	updatedAt: string;
-}
+import type { Collection } from "@/types/types";
 
 /**
  * Context type for collections management.

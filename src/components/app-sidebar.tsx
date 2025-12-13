@@ -30,7 +30,7 @@ export function AppSidebar({
 }: React.ComponentProps<typeof Sidebar> & {
 	user?: { name: string; email: string; avatar: string };
 }) {
-	const { theme } = useTheme();
+	const { resolvedTheme } = useTheme();
 	const defaultUser = {
 		name: "User",
 		email: "user@example.com",
@@ -39,25 +39,20 @@ export function AppSidebar({
 
 	const userData = user || defaultUser;
 
-	const logoSrc = theme === "dark" ? whiteLogo : blackLogo;
+	const logoSrc = resolvedTheme === "dark" ? whiteLogo : blackLogo;
 
 	return (
 		<Sidebar collapsible="offcanvas" {...props}>
 			<SidebarHeader>
 				<SidebarMenu>
 					<SidebarMenuItem>
-						<SidebarMenuButton
-							asChild
-							className="data-[slot=sidebar-menu-button]:p-1.5!"
-						>
-							<a href="/dashboard" className="flex items-center gap-2">
-								<img
-									src={logoSrc}
-									alt="Cortex CMS Logo"
-									className="h-8 w-auto animate-[spin_3s_linear_infinite]"
-								/>
-								<span className="font-semibold">Cortex CMS</span>
-							</a>
+						<SidebarMenuButton className="data-[slot=sidebar-menu-button]:p-1.5!">
+							<img
+								src={logoSrc}
+								alt="Cortex CMS Logo"
+								className="h-8 w-auto animate-[spin_3s_linear_infinite]"
+							/>
+							<span className="font-semibold">Cortex CMS</span>
 						</SidebarMenuButton>
 					</SidebarMenuItem>
 				</SidebarMenu>

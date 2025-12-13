@@ -22,27 +22,48 @@ export function ThemeProvider({
 	const [theme, setTheme] = useState<Theme>(
 		() => (localStorage.getItem(storageKey) as Theme) || defaultTheme,
 	);
+	const [resolvedTheme, setResolvedTheme] = useState<"dark" | "light">(
+		"light",
+	);
 
 	useEffect(() => {
 		const root = window.document.documentElement;
 
-		root.classList.remove("light", "dark");
-
+		// We use the data-theme attribute in CSS selectors (index.css)
+		// so ensure we set that attribute instead of classnames.
+		// If theme === 'system', set data-theme to 'dark' or 'light' based on system preference.
 		if (theme === "system") {
-			const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")
-				.matches
-				? "dark"
-				: "light";
-
+			const isSystemDark = window.matchMedia("(prefers-color-scheme: dark)")
+				.matches;
+			const systemTheme = isSystemDark ? "dark" : "light";
+			root.setAttribute("data-theme", systemTheme);
+			// apply class for tailwind dark variants
+			root.classList.remove("light", "dark");
 			root.classList.add(systemTheme);
+			setResolvedTheme(systemTheme);
 			return;
 		}
 
-		root.classList.add(theme);
+		// For named themes like 'amber' or 'amber-dark' or 'dark', set the data-theme
+		// attribute to the theme string directly and set root class to 'dark'/'light'
+		root.setAttribute("data-theme", theme);
+		root.classList.remove("light", "dark");
+		if (theme.endsWith("-dark") || theme === "dark") {
+			root.classList.add("dark");
+		} else {
+			root.classList.add("light");
+		}
+		// resolvedTheme: if theme is '...-dark' or 'dark', resolvedTheme === 'dark'
+		if (theme.endsWith("-dark") || theme === "dark") {
+			setResolvedTheme("dark");
+		} else {
+			setResolvedTheme("light");
+		}
 	}, [theme]);
 
 	const value = {
 		theme,
+		resolvedTheme,
 		setTheme: (theme: Theme) => {
 			localStorage.setItem(storageKey, theme);
 			setTheme(theme);

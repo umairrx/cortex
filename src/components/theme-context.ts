@@ -1,9 +1,10 @@
 import { createContext } from "react";
 
-export type Theme = "dark" | "light" | "system";
+export type Theme = string; // e.g., 'dark', 'light', 'amber', 'amber-dark', 'system'
 
 export type ThemeProviderState = {
 	theme: Theme;
+	resolvedTheme: "dark" | "light";
 	setTheme: (theme: Theme) => void;
 };
 
@@ -15,6 +16,7 @@ export type ThemeProviderProps = {
 
 const initialState: ThemeProviderState = {
 	theme: "system",
+	resolvedTheme: "light",
 	setTheme: () => null,
 };
 

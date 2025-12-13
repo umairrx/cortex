@@ -3,6 +3,7 @@ import { useUserData } from "../hooks/useUserData";
 import { AppSidebar } from "@/components/app-sidebar";
 import FontSelector from "@/components/FontSelector";
 import { ModeToggle } from "@/components/mode-toggle";
+import { ThemeColorSwitcher } from "@/components/theme-color-switcher";
 import {
 	SidebarHeader,
 	SidebarInset,
@@ -31,8 +32,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 				<SidebarHeader>
 					<div className="flex w-full justify-between items-center ">
 						<SidebarTrigger />
-						<div className="flex gap-3">
+						<div className="flex gap-3 items-center">
 							<FontSelector />
+							<ThemeColorSwitcher />
 							<ModeToggle />
 						</div>
 					</div>

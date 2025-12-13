@@ -1,6 +1,6 @@
 import { createContext } from "react";
 
-export type Theme = string; // e.g., 'dark', 'light', 'amber', 'amber-dark', 'system'
+export type Theme = string;
 
 export type ThemeProviderState = {
 	theme: Theme;

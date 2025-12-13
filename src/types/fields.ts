@@ -84,6 +84,61 @@ export const FIELD_TYPES: FieldGroup[] = [
 			},
 		],
 	},
+	{
+		name: "Boolean",
+		icon: "ToggleLeft",
+		types: [
+			{
+				type: "boolean",
+				label: "True/False",
+				component: "Checkbox",
+			},
+		],
+	},
+	{
+		name: "Number",
+		icon: "Hash",
+		types: [
+			{
+				type: "integer",
+				label: "Integer",
+				component: "NumberInput",
+				validation: { pattern: "^-?\\d+$" },
+			},
+			{
+				type: "decimal",
+				label: "Decimal",
+				component: "DecimalInput",
+			},
+		],
+	},
+	{
+		name: "Internet",
+		icon: "Globe",
+		types: [
+			{
+				type: "email",
+				label: "Email",
+				component: "EmailInput",
+			},
+			{
+				type: "url",
+				label: "URL",
+				component: "UrlInput",
+			},
+		],
+	},
+	{
+		name: "Color",
+		icon: "Palette",
+		types: [
+			{
+				type: "color",
+				label: "Color Picker",
+				component: "ColorInput",
+			},
+		],
+	},
 ];
 
 /**

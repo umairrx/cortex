@@ -15,6 +15,7 @@ import {
 	verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import type { AxiosError } from "axios";
 import { GripVertical, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -27,13 +28,16 @@ import {
 	Dialog,
 	DialogClose,
 	DialogContent,
+	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCollections } from "@/contexts/CollectionsContext";
 import CollectionTypesHeader from "@/pages/CollectionTypesHeader";
 import { FIELD_TYPES } from "@/types/fields";
+import type { CollectionField } from "@/types/types";
 import type { CollectionNameValidationResult } from "@/utils/collectionNameValidator";
 
 export interface FieldType {
@@ -48,19 +52,10 @@ export interface FieldType {
 	maxLength?: number;
 }
 
-interface CollectionField {
-	field_name: string;
+export interface FieldType {
 	type: string;
 	label: string;
-}
-
-interface Collection {
-	id: string;
-	name: string;
-	singular: string;
-	plural: string;
-	type: "collection" | "single";
-	fields: CollectionField[];
+	maxLength?: number;
 }
 
 /**
@@ -113,7 +108,7 @@ const CreateCollection = () => {
 	 * Saves the collection to the context and navigates to the collection edit page.
 	 * Uses the validated and normalized collection name to generate singular and plural forms.
 	 */
-	const saveCollection = () => {
+	const saveCollection = async () => {
 		if (!collectionNameValidation || !collectionNameValidation.isValid) {
 			return;
 		}
@@ -124,7 +119,7 @@ const CreateCollection = () => {
 			label: getMainFieldName(selectedTypes[field_name]),
 		}));
 
-		const collection: Collection = {
+		const collectionData = {
 			id: collectionNameValidation.singular,
 			name: collectionNameValidation.displayName,
 			singular: collectionNameValidation.singular,
@@ -133,8 +128,19 @@ const CreateCollection = () => {
 			fields,
 		};
 
-		addCollection(collection);
-		navigate(`/collection-types-builder/${collection.id}`);
+		try {
+			const createdCollection = await addCollection(collectionData);
+			navigate(`/collection-types-builder/${createdCollection.id}`);
+			toast.success("Collection saved successfully.");
+		} catch (error: unknown) {
+			console.error("Failed to save collection:", error);
+			const axiosError = error as AxiosError;
+			if (axiosError.response?.status === 403) {
+				toast.error("You do not have permission to perform this action.");
+			} else {
+				toast.error("Failed to save collection. Please try again.");
+			}
+		}
 	};
 
 	/**
@@ -319,48 +325,50 @@ const CreateCollection = () => {
 	return (
 		<div className="flex w-full justify-between">
 			<div className="w-full py-3 border-r">
-				<div className="relative">
-					<CollectionTypesHeader
-						title={
-							collectionNameValidation?.displayName
-								? `Collection: ${collectionNameValidation.displayName}`
-								: "New Collection Type"
-						}
-						tagline={
-							isCollectionCreated
-								? "Add fields to this collection"
-								: "Define a new collection"
-						}
-					/>
-					{isCollectionCreated && (
-						<div className="absolute right-4 top-3 flex items-center gap-2">
-							<Button
-								variant="destructive"
-								size="sm"
-								onClick={() => setShowDeleteConfirmDialog(true)}
-								title="Delete collection"
-							>
-								<Trash2 className="h-4 w-4" />
-							</Button>
-							<Button
-								variant="ghost"
-								size="sm"
-								onClick={() => {
-									if (collectionNameValidation?.displayName) {
-										setPrevCollectionName(collectionNameValidation.displayName);
-										setCollectionDraftName(
-											collectionNameValidation.displayName,
-										);
-										setShowCreateCollectionDialog(true);
-									}
-								}}
-							>
-								Edit
-							</Button>
-						</div>
-					)}
-				</div>
-				<div className="py-3 space-y-4">
+				<CollectionTypesHeader
+					title={
+						collectionNameValidation?.displayName
+							? `Collection: ${collectionNameValidation.displayName}`
+							: "New Collection Type"
+					}
+					tagline={
+						isCollectionCreated
+							? "Add fields to this collection"
+							: "Define a new collection"
+					}
+					actions={
+						isCollectionCreated && (
+							<div className="flex items-center gap-2">
+								<Button
+									variant="destructive"
+									size="sm"
+									onClick={() => setShowDeleteConfirmDialog(true)}
+									title="Delete collection"
+								>
+									<Trash2 className="h-4 w-4" />
+								</Button>
+								<Button
+									variant="ghost"
+									size="sm"
+									onClick={() => {
+										if (collectionNameValidation?.displayName) {
+											setPrevCollectionName(
+												collectionNameValidation.displayName,
+											);
+											setCollectionDraftName(
+												collectionNameValidation.displayName,
+											);
+											setShowCreateCollectionDialog(true);
+										}
+									}}
+								>
+									Edit
+								</Button>
+							</div>
+						)
+					}
+				/>
+				<div className="space-y-4">
 					{isCollectionCreated ? (
 						<FieldManagement
 							isCollectionCreated={isCollectionCreated}
@@ -403,7 +411,7 @@ const CreateCollection = () => {
 					}
 					tagline="Review your selected fields"
 				/>
-				<div className="px-4 py-3 space-y-4">
+				<ScrollArea className="h-[calc(100vh-200px)] px-4 py-3 pb-12 space-y-4 min-h-0 overflow-auto">
 					{selectedFields.length === 0 ? (
 						<div className="text-sm text-muted-foreground">
 							No fields selected yet.
@@ -448,6 +456,10 @@ const CreateCollection = () => {
 								<DialogContent>
 									<DialogHeader>
 										<DialogTitle>Save Collection</DialogTitle>
+										<DialogDescription>
+											Confirm to save your collection configuration. This will
+											create a new collection type.
+										</DialogDescription>
 									</DialogHeader>
 									<div className="space-y-2">
 										<p>Are you sure you want to save this collection?</p>
@@ -457,10 +469,9 @@ const CreateCollection = () => {
 											<Button variant="ghost">Cancel</Button>
 										</DialogClose>
 										<Button
-											onClick={() => {
-												saveCollection();
+											onClick={async () => {
+												await saveCollection();
 												setShowSaveDialog(false);
-												toast.success("Collection saved successfully.");
 											}}
 										>
 											Save
@@ -478,7 +489,7 @@ const CreateCollection = () => {
 							)}
 						</div>
 					)}
-				</div>
+				</ScrollArea>
 			</div>
 
 			<CollectionDialogs

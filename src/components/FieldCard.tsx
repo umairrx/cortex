@@ -5,6 +5,7 @@ import {
 	Dialog,
 	DialogClose,
 	DialogContent,
+	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
@@ -46,7 +47,7 @@ const FieldCard = ({
 	onAdd,
 }: FieldCardProps) => {
 	return (
-		<div>
+		<div className="mb-3">
 			<Tooltip>
 				<TooltipTrigger asChild>
 					{fieldGroup.types.length > 1 ? (
@@ -74,6 +75,10 @@ const FieldCard = ({
 							<DialogContent>
 								<DialogHeader>
 									<DialogTitle>Choose {fieldGroup.name} Type</DialogTitle>
+									<DialogDescription>
+										Select the appropriate type for this field from the
+										available options.
+									</DialogDescription>
 								</DialogHeader>
 								<div className="space-y-2">
 									{fieldGroup.types.map((field) => (

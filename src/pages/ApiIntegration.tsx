@@ -114,7 +114,7 @@ export default function ApiIntegration() {
 				title="API Integration"
 				description="Manage and configure API integrations for your CMS."
 			/>
-			<ScrollArea className="h-[calc(100vh-200px)]">
+			<ScrollArea className="h-[calc(100vh-200px)] min-h-0 overflow-auto">
 				<div className="p-6">
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 						<Card className="w-full">

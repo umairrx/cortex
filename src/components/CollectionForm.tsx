@@ -39,7 +39,7 @@ export const CollectionForm = ({
 	setCollectionDraftName,
 }: CollectionFormProps) => {
 	return (
-		<div className="w-full py-3">
+		<div className="w-full py-1">
 			<div className="px-1 py-3">
 				{isCollectionCreated ? (
 					<div className="text-center py-8">
@@ -57,7 +57,7 @@ export const CollectionForm = ({
 							</p>
 						</div>
 
-						<ScrollArea className="h-80 pr-4">
+						<ScrollArea className="h-80 pr-4 overflow-auto">
 							<div className="space-y-6">
 								<CollectionNameInput
 									collectionNameInput={collectionNameInput}

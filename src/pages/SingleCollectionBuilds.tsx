@@ -1,10 +1,12 @@
-import { Trash2 } from "lucide-react";
+import { Briefcase, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { EmptyState } from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
 	DialogContent,
+	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
@@ -29,19 +31,23 @@ const SingleCollectionBuilds = () => {
 	const collection = id ? collections.find((c) => c.id === id) : null;
 
 	if (!collection) {
-		return <div>Collection not found</div>;
+		return (
+			<EmptyState
+				icon={Briefcase}
+				title="Collection Not Found"
+				description="The collection you're looking for doesn't exist or has been deleted."
+			/>
+		);
 	}
 
 	return (
 		<TooltipProvider>
 			<div className="flex w-full justify-between">
 				<div className="w-full py-3">
-					<div className="relative">
-						<CollectionTypesHeader
-							title={`${collection.name} (Single Type)`}
-							tagline="This is a single entry collection"
-						/>
-						<div className="absolute right-4 top-3">
+					<CollectionTypesHeader
+						title={`${collection.name} (Single Type)`}
+						tagline="This is a single entry collection"
+						actions={
 							<Button
 								variant="destructive"
 								size="sm"
@@ -50,8 +56,8 @@ const SingleCollectionBuilds = () => {
 								<Trash2 className="h-4 w-4 mr-2" />
 								Delete Collection
 							</Button>
-						</div>
-					</div>
+						}
+					/>
 					<div className="px-4 py-3 space-y-4">
 						<div className="text-sm text-muted-foreground mb-4">
 							Single types contain one entry with the following fields:
@@ -87,6 +93,10 @@ const SingleCollectionBuilds = () => {
 				<DialogContent>
 					<DialogHeader>
 						<DialogTitle>Delete Collection</DialogTitle>
+						<DialogDescription>
+							This action cannot be undone. All data associated with this
+							collection will be permanently removed.
+						</DialogDescription>
 					</DialogHeader>
 					<div className="space-y-2">
 						<p>

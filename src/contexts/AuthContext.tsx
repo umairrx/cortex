@@ -1,13 +1,6 @@
-import axios from "axios";
 import type { ReactNode } from "react";
-import { createContext, useEffect, useState } from "react";
-
-const API_BASE_URL =
-	import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api";
-
-const api = axios.create({
-	baseURL: API_BASE_URL,
-});
+import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { api, setAccessToken } from "../lib/api";
 
 interface AuthContextType {
 	isAuthenticated: boolean;
@@ -26,6 +19,14 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+export const useAuth = () => {
+	const context = useContext(AuthContext);
+	if (!context) {
+		throw new Error("useAuth must be used within AuthProvider");
+	}
+	return context;
+};
+
 export { AuthContext };
 
 /**
@@ -40,86 +41,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 	const [user, setUser] = useState<{ email: string } | null>(null);
 	const [loading, setLoading] = useState(true);
 
-	api.interceptors.request.use((config) => {
-		const token = localStorage.getItem("accessToken");
-		if (token) {
-			config.headers.Authorization = `Bearer ${token}`;
-		}
-		return config;
-	});
-
-	api.interceptors.response.use(
-		(response) => response,
-		async (error) => {
-			if (error.response?.status === 401) {
-				const refreshToken = localStorage.getItem("refreshToken");
-				if (refreshToken) {
-					try {
-						const refreshResponse = await axios.post(
-							`${API_BASE_URL}/refresh`,
-							{
-								refreshToken,
-							},
-						);
-						const { accessToken, refreshToken: newRefreshToken } =
-							refreshResponse.data;
-						localStorage.setItem("accessToken", accessToken);
-						localStorage.setItem("refreshToken", newRefreshToken);
-
-						error.config.headers.Authorization = `Bearer ${accessToken}`;
-						return api.request(error.config);
-					} catch {
-						localStorage.removeItem("accessToken");
-						localStorage.removeItem("refreshToken");
-						localStorage.removeItem("user");
-						setUser(null);
-						setIsAuthenticated(false);
-						return Promise.reject(error);
-					}
-				}
-			}
-			return Promise.reject(error);
-		},
-	);
+	const initParams = useRef(false);
 
 	useEffect(() => {
+		if (initParams.current) return;
+		initParams.current = true;
+
 		/**
 		 * Initializes authentication state on component mount.
-		 * Checks for stored tokens and user data, verifies them, and sets auth state.
+		 * Checks if the user has a valid session (cookie) by calling profile.
 		 */
 		const initAuth = async () => {
-			const accessToken = localStorage.getItem("accessToken");
-			const refreshToken = localStorage.getItem("refreshToken");
-			const storedUser = localStorage.getItem("user");
-
-			if (accessToken && refreshToken && storedUser) {
+			try {
 				try {
-					await api.get("/profile");
-					setUser(JSON.parse(storedUser));
+					const response = await api.post("/refresh");
+					const { accessToken } = response.data;
+					setAccessToken(accessToken);
+
+					const profileResponse = await api.get("/profile");
+					setUser(profileResponse.data.user);
 					setIsAuthenticated(true);
-				} catch {
-					try {
-						const refreshResponse = await axios.post(
-							`${API_BASE_URL}/refresh`,
-							{
-								refreshToken,
-							},
-						);
-						const { accessToken: newAccess, refreshToken: newRefresh } =
-							refreshResponse.data;
-						localStorage.setItem("accessToken", newAccess);
-						localStorage.setItem("refreshToken", newRefresh);
-						await api.get("/profile");
-						setUser(JSON.parse(storedUser));
-						setIsAuthenticated(true);
-					} catch {
-						localStorage.removeItem("accessToken");
-						localStorage.removeItem("refreshToken");
-						localStorage.removeItem("user");
-					}
+				} catch (error) {
+					console.error("Profile fetch error:", error);
+					setAccessToken(null);
+					setUser(null);
+					setIsAuthenticated(false);
 				}
+			} catch (error) {
+				console.error("Auth init error:", error);
+				setAccessToken(null);
+				setUser(null);
+				setIsAuthenticated(false);
+			} finally {
+				setLoading(false);
 			}
-			setLoading(false);
 		};
 
 		initAuth();
@@ -127,7 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 	/**
 	 * Logs in a user with email and password.
-	 * Stores tokens and user data in localStorage and updates state.
+	 * Stores tokens in memory (and cookie via server) and updates state.
 	 *
 	 * @param email - The user's email address.
 	 * @param password - The user's password.
@@ -138,39 +93,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 		password: string,
 	): Promise<{ success: boolean; error?: string }> => {
 		try {
-			const response = await axios.post(`${API_BASE_URL}/signin`, {
+			const response = await api.post("/signin", {
 				email,
 				password,
 			});
-			const { accessToken, refreshToken } = response.data;
-			localStorage.setItem("accessToken", accessToken);
-			localStorage.setItem("refreshToken", refreshToken);
-			const userData = { email };
-			localStorage.setItem("user", JSON.stringify(userData));
-			setUser(userData);
+			const { accessToken } = response.data;
+			setAccessToken(accessToken);
+
+			try {
+				const profileResponse = await api.get("/profile");
+				setUser(profileResponse.data.user);
+			} catch {
+				setUser({ email });
+			}
+
 			setIsAuthenticated(true);
 			return { success: true };
 		} catch (error: unknown) {
 			console.error("Login error:", error);
 			let errorMessage = "Login failed";
 			const axiosError = error as {
-				response?: { status: number; data: { errors?: string[] } };
+				response?: {
+					status: number;
+					data: { message?: string; errors?: string[] };
+				};
 			};
-			if (axiosError.response?.status === 400) {
-				errorMessage =
-					axiosError.response.data.errors?.[0] || "Invalid credentials";
-			} else if (axiosError.response?.status === 429) {
-				errorMessage = "Too many attempts, please try again later";
-			} else if (axiosError.response?.status === 500) {
-				errorMessage = "Server error, please try again later";
+
+			if (axiosError.response?.data?.message) {
+				errorMessage = axiosError.response.data.message;
+			} else if (axiosError.response?.data?.errors?.[0]) {
+				errorMessage = axiosError.response.data.errors[0];
 			}
+
 			return { success: false, error: errorMessage };
 		}
 	};
 
 	/**
 	 * Signs up a new user with email and password.
-	 * Stores tokens and user data in localStorage and updates state.
+	 * Stores tokens in memory and updates state.
 	 *
 	 * @param email - The user's email address.
 	 * @param password - The user's password.
@@ -181,55 +142,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 		password: string,
 	): Promise<{ success: boolean; error?: string }> => {
 		try {
-			const response = await axios.post(`${API_BASE_URL}/signup`, {
+			const response = await api.post("/signup", {
 				email,
 				password,
 			});
-			const { accessToken, refreshToken } = response.data;
-			localStorage.setItem("accessToken", accessToken);
-			localStorage.setItem("refreshToken", refreshToken);
-			const userData = { email };
-			localStorage.setItem("user", JSON.stringify(userData));
-			setUser(userData);
+			const { accessToken } = response.data;
+			setAccessToken(accessToken);
+
+			try {
+				const profileResponse = await api.get("/profile");
+				setUser(profileResponse.data.user);
+			} catch {
+				setUser({ email });
+			}
+
 			setIsAuthenticated(true);
 			return { success: true };
 		} catch (error: unknown) {
 			console.error("Signup error:", error);
 			let errorMessage = "Signup failed";
 			const axiosError = error as {
-				response?: { status: number; data: { errors?: string[] } };
+				response?: {
+					status: number;
+					data: { message?: string; errors?: string[] };
+				};
 			};
-			if (axiosError.response?.status === 400) {
-				errorMessage = axiosError.response.data.errors?.[0] || "Invalid data";
-			} else if (axiosError.response?.status === 429) {
-				errorMessage = "Too many attempts, please try again later";
-			} else if (axiosError.response?.status === 500) {
-				errorMessage = "Server error, please try again later";
+
+			if (axiosError.response?.data?.message) {
+				errorMessage = axiosError.response.data.message;
+			} else if (axiosError.response?.data?.errors?.[0]) {
+				errorMessage = axiosError.response.data.errors[0];
 			}
+
 			return { success: false, error: errorMessage };
 		}
 	};
 
 	/**
 	 * Logs out the current user.
-	 * Sends a logout request to the server and clears local storage and state.
+	 * Sends a logout request to the server and clears state.
 	 *
 	 * @returns A promise that resolves when logout is complete.
 	 */
 	const logout = async () => {
 		try {
-			const refreshToken = localStorage.getItem("refreshToken");
-			if (refreshToken) {
-				await axios.post(`${API_BASE_URL}/logout`, {
-					refreshToken,
-				});
-			}
+			await api.post("/logout");
 		} catch (error) {
 			console.error("Logout error:", error);
 		} finally {
-			localStorage.removeItem("accessToken");
-			localStorage.removeItem("refreshToken");
-			localStorage.removeItem("user");
+			setAccessToken(null);
 			setUser(null);
 			setIsAuthenticated(false);
 		}

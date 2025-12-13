@@ -5,6 +5,7 @@ import {
 	Dialog,
 	DialogClose,
 	DialogContent,
+	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
@@ -15,12 +16,42 @@ import {
 	type CollectionNameValidationResult,
 	validateAndNormalizeCollectionName,
 } from "@/utils/collectionNameValidator";
+import { reservedWords } from "@/utils/reservedWords";
 
 const fieldNameSchema = z
 	.string()
-	.regex(
-		/^[a-z][a-z0-9_]*$/,
-		"Field name must be lowercase, snake_case, no spaces, no special characters beyond '_'",
+	.refine((value) => /^[a-z][a-zA-Z0-9]*$/.test(value), {
+		message:
+			"Field name must be camelCase, start with a lowercase letter, and contain only letters and numbers.",
+	})
+	.refine((value) => !/^[0-9]/.test(value), {
+		message: "Field name cannot start with a number.",
+	})
+	.refine((value) => !reservedWords.includes(value), {
+		message: "Field name cannot be a reserved word.",
+	})
+	.refine(
+		(value) => {
+			if (
+				value.startsWith("is") ||
+				value.startsWith("has") ||
+				value.startsWith("can") ||
+				value.startsWith("should")
+			) {
+				return true;
+			}
+			if (value.endsWith("At") || value.endsWith("Id")) {
+				return true;
+			}
+			if (value.endsWith("s")) {
+				return true;
+			}
+			return !value.match(/^(is|has|can|should|.*At|.*Id|.*s)$/);
+		},
+		{
+			message:
+				"Boolean fields must start with is, has, can, or should. Date/time fields must end with At. Relation fields must end with Id. Arrays must use plural nouns.",
+		},
 	);
 
 type FieldBeingAdded = {
@@ -105,6 +136,11 @@ export const CollectionDialogs = ({
 								? "Collection Details (Read-Only)"
 								: "Create New Collection"}
 						</DialogTitle>
+						<DialogDescription>
+							{isCollectionCreated
+								? "View the details of the created collection."
+								: "Enter a name for your new collection. The name should be unique and descriptive."}
+						</DialogDescription>
 					</DialogHeader>
 					{!isCollectionCreated ? (
 						<>
@@ -214,6 +250,10 @@ export const CollectionDialogs = ({
 				<DialogContent>
 					<DialogHeader>
 						<DialogTitle>Delete Collection</DialogTitle>
+						<DialogDescription>
+							This will permanently remove the collection and all its selected
+							fields. This action cannot be undone.
+						</DialogDescription>
 					</DialogHeader>
 					<div className="space-y-2">
 						<p>
@@ -253,6 +293,10 @@ export const CollectionDialogs = ({
 				<DialogContent>
 					<DialogHeader>
 						<DialogTitle>Enter Field Name</DialogTitle>
+						<DialogDescription>
+							Provide a unique name for this field. The name should be
+							descriptive and follow naming conventions.
+						</DialogDescription>
 					</DialogHeader>
 
 					<div className="space-y-2">
@@ -262,11 +306,15 @@ export const CollectionDialogs = ({
 							value={fieldBeingAdded?.field_name || ""}
 							onChange={(e) => {
 								const value = e.target.value;
+								const normalizedValue = value
+									.replace(/[^a-zA-Z0-9]/g, "")
+									.replace(/^[0-9]+/, "")
+									.replace(/^[A-Z]/, (char) => char.toLowerCase());
 								setFieldBeingAdded((prev: FieldBeingAdded) =>
-									prev ? { ...prev, field_name: value } : prev,
+									prev ? { ...prev, field_name: normalizedValue } : prev,
 								);
 
-								const result = fieldNameSchema.safeParse(value);
+								const result = fieldNameSchema.safeParse(normalizedValue);
 								if (result.success) {
 									setFieldNameError("");
 								} else {

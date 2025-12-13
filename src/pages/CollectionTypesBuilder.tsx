@@ -49,7 +49,7 @@ export default function CollectionTypesBuilder() {
 				description="Build and manage your collection types here."
 			/>
 			<div className="w-full flex h-screen">
-				<ScrollArea className="bg-sidebar py-4 pr-2 w-80 overflow-y-auto">
+				<ScrollArea className="bg-sidebar py-4 pr-2 w-80 overflow-y-auto border-r">
 					<div className="px-2 mb-6 sticky top-0 bg-sidebar pt-4 pb-2 z-10">
 						<Link
 							to="/collection-types-builder"

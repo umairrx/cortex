@@ -17,7 +17,7 @@ import { navigationItems } from "@/config/navigation";
 
 /**
  * Main application sidebar component that provides navigation and user information.
- * Displays the Cortex CMS logo, navigation menu, and user profile section.
+ * Displays the Cortex DB logo, navigation menu, and user profile section.
  * Adapts logo color based on current theme (light/dark mode).
  *
  * @param user - User data containing name, email, and avatar information
@@ -49,10 +49,10 @@ export function AppSidebar({
 						<SidebarMenuButton className="data-[slot=sidebar-menu-button]:p-1.5!">
 							<img
 								src={logoSrc}
-								alt="Cortex CMS Logo"
+								alt="Cortex DB Logo"
 								className="h-8 w-auto animate-[spin_3s_linear_infinite]"
 							/>
-							<span className="font-semibold">Cortex CMS</span>
+							<span className="font-semibold">Cortex DB</span>
 						</SidebarMenuButton>
 					</SidebarMenuItem>
 				</SidebarMenu>

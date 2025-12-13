@@ -1,3 +1,5 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { useEffect, useRef } from "react";
 import {
 	Navigate,
@@ -30,6 +32,9 @@ import SignUp from "./pages/SignUp.tsx";
  *
  * @returns The application routes with a loading bar indicator
  */
+
+const queryClient = new QueryClient();
+
 function AppContent() {
 	const loadingBarRef = useRef<LoadingBarRef | null>(null);
 	const { theme } = useTheme();
@@ -108,6 +113,7 @@ function AppContent() {
 				<Route path="/signin" element={<SignIn />} />
 				<Route path="/signup" element={<SignUp />} />
 			</Routes>
+			<ReactQueryDevtools initialIsOpen={false} />
 		</>
 	);
 }
@@ -121,16 +127,18 @@ function AppContent() {
  */
 function App() {
 	return (
-		<ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-			<AuthProvider>
-				<CollectionsProvider>
-					<Router>
-						<AppContent />
-					</Router>
-				</CollectionsProvider>
-			</AuthProvider>
-			<Toaster />
-		</ThemeProvider>
+		<QueryClientProvider client={queryClient}>
+			<ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+				<AuthProvider>
+					<CollectionsProvider>
+						<Router>
+							<AppContent />
+						</Router>
+					</CollectionsProvider>
+				</AuthProvider>
+				<Toaster />
+			</ThemeProvider>
+		</QueryClientProvider>
 	);
 }
 

@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { useUserData } from "../hooks/useUserData";
 import { AppSidebar } from "@/components/app-sidebar";
 import FontSelector from "@/components/FontSelector";
 import { ModeToggle } from "@/components/mode-toggle";
@@ -10,6 +9,7 @@ import {
 	SidebarProvider,
 	SidebarTrigger,
 } from "@/components/ui/sidebar";
+import { useUserData } from "../hooks/useUserData";
 
 interface DashboardLayoutProps {
 	children: ReactNode;
@@ -28,7 +28,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 	return (
 		<SidebarProvider>
 			<AppSidebar user={userData} />
-			<SidebarInset className="max-h-screen overflow-hidden">
+			<SidebarInset className="max-h-screen ">
 				<SidebarHeader>
 					<div className="flex w-full justify-between items-center ">
 						<SidebarTrigger />

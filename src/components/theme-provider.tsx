@@ -22,9 +22,7 @@ export function ThemeProvider({
 	const [theme, setTheme] = useState<Theme>(
 		() => (localStorage.getItem(storageKey) as Theme) || defaultTheme,
 	);
-	const [resolvedTheme, setResolvedTheme] = useState<"dark" | "light">(
-		"light",
-	);
+	const [resolvedTheme, setResolvedTheme] = useState<"dark" | "light">("light");
 
 	useEffect(() => {
 		const root = window.document.documentElement;
@@ -33,8 +31,9 @@ export function ThemeProvider({
 		// so ensure we set that attribute instead of classnames.
 		// If theme === 'system', set data-theme to 'dark' or 'light' based on system preference.
 		if (theme === "system") {
-			const isSystemDark = window.matchMedia("(prefers-color-scheme: dark)")
-				.matches;
+			const isSystemDark = window.matchMedia(
+				"(prefers-color-scheme: dark)",
+			).matches;
 			const systemTheme = isSystemDark ? "dark" : "light";
 			root.setAttribute("data-theme", systemTheme);
 			// apply class for tailwind dark variants

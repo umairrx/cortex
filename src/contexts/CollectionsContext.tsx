@@ -1,17 +1,24 @@
+import { createContext, type ReactNode, useContext } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import {
-	createContext,
-	type ReactNode,
-	useContext,
-	useEffect,
-	useState,
-} from "react";
+	useCollectionsQuery,
+	useCreateCollectionMutation,
+	useDeleteCollectionMutation,
+	useUpdateCollectionMutation,
+} from "@/hooks/tanstack/useCollections";
 
+/**
+ * Represents a field in a collection.
+ */
 interface CollectionField {
 	field_name: string;
 	type: string;
 	label: string;
 }
 
+/**
+ * Represents a collection with its metadata and fields.
+ */
 interface Collection {
 	id: string;
 	name: string;
@@ -19,19 +26,35 @@ interface Collection {
 	plural: string;
 	type: "collection" | "single";
 	fields: CollectionField[];
+	createdAt: string;
+	updatedAt: string;
 }
 
+/**
+ * Context type for collections management.
+ */
 interface CollectionsContextType {
 	collections: Collection[];
-	addCollection: (collection: Collection) => void;
-	deleteCollection: (id: string) => void;
+	isLoading: boolean;
+	error: Error | null;
+	addCollection: (
+		collection: Omit<Collection, "createdAt" | "updatedAt">,
+	) => Promise<Collection>;
+	updateCollection: (
+		id: string,
+		collection: Omit<Collection, "createdAt" | "updatedAt">,
+	) => Promise<void>;
+	deleteCollection: (id: string) => Promise<void>;
 }
 
 const CollectionsContext = createContext<CollectionsContextType | undefined>(
 	undefined,
 );
-
-export const useCollections = () => {
+/**
+ * Hook to access the collections context.
+ * @returns The collections context value.
+ * @throws Error if used outside of CollectionsProvider.
+ */ export const useCollections = () => {
 	const context = useContext(CollectionsContext);
 	if (!context) {
 		throw new Error("useCollections must be used within CollectionsProvider");
@@ -40,51 +63,52 @@ export const useCollections = () => {
 };
 
 /**
- * Provider component that manages collections state and persists data to localStorage.
- * Provides methods to add and delete collections while keeping data synchronized.
+ * Provider component that manages collections state using TanStack Query.
+ * Provides methods to add and delete collections via API calls.
  *
  * @param children - The child components to render within the provider
  * @returns The CollectionsContext provider wrapping the children
  */
 export const CollectionsProvider = ({ children }: { children: ReactNode }) => {
-	const [collections, setCollections] = useState<Collection[]>([]);
+	const { isAuthenticated } = useAuth();
+	const {
+		data: collections = [],
+		isLoading,
+		error,
+	} = useCollectionsQuery({
+		enabled: isAuthenticated,
+	});
+	const createMutation = useCreateCollectionMutation();
+	const updateMutation = useUpdateCollectionMutation();
+	const deleteMutation = useDeleteCollectionMutation();
 
-	useEffect(() => {
-		const stored = localStorage.getItem("collections");
-		if (stored) {
-			setCollections(JSON.parse(stored));
-		}
-	}, []);
-
-	/**
-	 * Adds or updates a collection in the state and localStorage.
-	 * If a collection with the same ID exists, it will be replaced; otherwise it will be added.
-	 *
-	 * @param collection - The collection object to add or update
-	 */
-	const addCollection = (collection: Collection) => {
-		const updated = [
-			...collections.filter((c) => c.id !== collection.id),
-			collection,
-		];
-		setCollections(updated);
-		localStorage.setItem("collections", JSON.stringify(updated));
+	const addCollection = async (
+		collection: Omit<Collection, "createdAt" | "updatedAt">,
+	): Promise<Collection> => {
+		return await createMutation.mutateAsync(collection);
 	};
 
-	/**
-	 * Deletes a collection from the state and localStorage by its ID.
-	 *
-	 * @param id - The unique identifier of the collection to delete
-	 */
-	const deleteCollection = (id: string) => {
-		const updated = collections.filter((c) => c.id !== id);
-		setCollections(updated);
-		localStorage.setItem("collections", JSON.stringify(updated));
+	const updateCollection = async (
+		id: string,
+		collection: Omit<Collection, "createdAt" | "updatedAt">,
+	) => {
+		await updateMutation.mutateAsync({ id, collection });
+	};
+
+	const deleteCollection = async (id: string) => {
+		await deleteMutation.mutateAsync(id);
 	};
 
 	return (
 		<CollectionsContext.Provider
-			value={{ collections, addCollection, deleteCollection }}
+			value={{
+				collections,
+				isLoading,
+				error,
+				addCollection,
+				updateCollection,
+				deleteCollection,
+			}}
 		>
 			{children}
 		</CollectionsContext.Provider>

@@ -1,5 +1,8 @@
+import { Database } from "lucide-react";
 import { useParams } from "react-router-dom";
+import { EmptyState } from "@/components/EmptyState";
 import { useCollections } from "@/contexts/CollectionsContext";
+import { useCollectionQuery } from "@/hooks/tanstack/useCollections";
 import CollectionBuilds from "./CollectionBuilds";
 import SingleCollectionBuilds from "./SingleCollectionBuilds";
 
@@ -13,14 +16,31 @@ import SingleCollectionBuilds from "./SingleCollectionBuilds";
 const CollectionWrapper = () => {
 	const { id } = useParams<{ id: string }>();
 	const { collections } = useCollections();
+	const { data: collection, isLoading } = useCollectionQuery(id || "");
 
-	const collection = collections.find((c) => c.id === id);
+	// First try to find in the collections list
+	let foundCollection = collections.find((c) => c.id === id);
 
-	if (!collection) {
-		return <div>Collection not found</div>;
+	// If not found in list, use the individual query result
+	if (!foundCollection && collection) {
+		foundCollection = collection;
 	}
 
-	if (collection.type === "single") {
+	if (isLoading) {
+		return <div>Loading collection...</div>;
+	}
+
+	if (!foundCollection) {
+		return (
+			<EmptyState
+				icon={Database}
+				title="Collection Not Found"
+				description="The collection you're looking for doesn't exist or has been deleted."
+			/>
+		);
+	}
+
+	if (foundCollection.type === "single") {
 		return <SingleCollectionBuilds />;
 	}
 

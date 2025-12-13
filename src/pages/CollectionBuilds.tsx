@@ -22,34 +22,154 @@ import {
 	GripVertical,
 	Image as ImageIcon,
 	Trash2,
+	ToggleLeft,
+	Hash,
+	Globe,
+	Palette,
 } from "lucide-react";
-import React, { useState } from "react";
+import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { z } from "zod";
+import { EmptyState } from "@/components/EmptyState";
 import FieldCard from "@/components/FieldCard";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
 	DialogClose,
 	DialogContent,
+	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useCollections } from "@/contexts/CollectionsContext";
 import { FIELD_TYPES } from "@/types/fields";
 import CollectionTypesHeader from "./CollectionTypesHeader";
 
-const fieldNameSchema = z
-	.string()
-	.regex(
-		/^[a-z][a-z0-9_]*$/,
-		"Field name must be lowercase, snake_case, no spaces, no special characters beyond '_'",
-	);
+/**
+ * Reserved keywords that cannot be used as field names.
+ */
+const RESERVED_WORDS = new Set([
+	"abstract",
+	"arguments",
+	"await",
+	"boolean",
+	"break",
+	"byte",
+	"case",
+	"catch",
+	"char",
+	"class",
+	"const",
+	"continue",
+	"debugger",
+	"default",
+	"delete",
+	"do",
+	"double",
+	"else",
+	"enum",
+	"eval",
+	"export",
+	"extends",
+	"false",
+	"final",
+	"finally",
+	"float",
+	"for",
+	"function",
+	"goto",
+	"if",
+	"implements",
+	"import",
+	"in",
+	"instanceof",
+	"int",
+	"interface",
+	"let",
+	"long",
+	"native",
+	"new",
+	"null",
+	"package",
+	"private",
+	"protected",
+	"public",
+	"return",
+	"short",
+	"static",
+	"super",
+	"switch",
+	"synchronized",
+	"this",
+	"throw",
+	"throws",
+	"transient",
+	"true",
+	"try",
+	"typeof",
+	"var",
+	"void",
+	"volatile",
+	"while",
+	"with",
+	"yield",
+	"id",
+	"type",
+	"data",
+	"value",
+	"result",
+	"error",
+	"message",
+	"status",
+	"code",
+	"response",
+	"request",
+	"meta",
+	"config",
+	"options",
+	"params",
+	"args",
+	"props",
+	"state",
+]);
+
+const normalizeToCamelCase = (name: string): string => {
+	return name
+		.split(/[_\s-]+/)
+		.map((word, index) => {
+			if (index === 0) return word.toLowerCase();
+			return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+		})
+		.join("");
+};
+
+const validateFieldName = (name: string): string => {
+	if (!name.trim()) return "Field name is required";
+	const trimmed = name.trim();
+
+	if (!/^[a-z][a-zA-Z0-9]*$/.test(trimmed)) {
+		if (/\s/.test(trimmed))
+			return "Field name cannot contain spaces. Use camelCase instead.";
+		if (/^[0-9]/.test(trimmed))
+			return "Field name must start with a lowercase letter, not a number.";
+		if (/[^a-zA-Z0-9]/.test(trimmed))
+			return "Field name can only contain letters and numbers. Use camelCase for multi-word names.";
+	}
+
+	if (!/^[a-z]/.test(trimmed))
+		return "Field name must start with a lowercase letter.";
+	if (trimmed.length < 2)
+		return "Field name must be descriptive and at least 2 characters.";
+	if (RESERVED_WORDS.has(trimmed))
+		return `"${trimmed}" is a reserved word and cannot be used.`;
+
+	return "";
+};
 
 export interface FieldType {
 	type: string;
@@ -63,79 +183,48 @@ interface CollectionField {
 	label: string;
 }
 
-/**
- * Page component for viewing and managing fields of an existing collection.
- * Allows users to edit collection name, add new fields, and remove existing fields.
- * Provides a two-panel interface with current fields and available fields to add.
- *
- * @returns The collection builds/edits page for the specified collection
- */
 const CollectionBuilds = () => {
 	const { id } = useParams<{ id: string }>();
-	const { collections, addCollection, deleteCollection } = useCollections();
+	const { collections, updateCollection, deleteCollection } = useCollections();
 	const navigate = useNavigate();
-	const [selectedTypes, setSelectedTypes] = useState<Record<string, string>>(
-		{},
-	);
-	const [selectedFields, setSelectedFields] = useState<string[]>([]);
+
+	const [sidebarSelections, setSidebarSelections] = useState<
+		Record<string, string>
+	>({});
+
 	const sensors = useSensors(
 		useSensor(PointerSensor),
 		useSensor(KeyboardSensor, {
 			coordinateGetter: sortableKeyboardCoordinates,
 		}),
 	);
+
 	const [search, setSearch] = useState("");
+	const [currentFieldsSearch, setCurrentFieldsSearch] = useState("");
 	const [fieldBeingAdded, setFieldBeingAdded] = useState<{
 		fieldName: string;
 		type: string;
 		field_name: string;
 	} | null>(null);
+
 	const [showFieldNameDialog, setShowFieldNameDialog] = useState(false);
 	const [fieldNameError, setFieldNameError] = useState<string>("");
 	const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-	const [showSaveDialog, setShowSaveDialog] = useState(false);
 
 	const collection = id ? collections.find((c) => c.id === id) : null;
+	const currentFields = collection?.fields || [];
 
-	React.useEffect(() => {
-		if (collection) {
-			const fields = collection.fields.map((f) => f.field_name);
-			const types: Record<string, string> = {};
-			collection.fields.forEach((f) => {
-				types[f.field_name] = f.type;
-			});
-			setSelectedFields(fields);
-			setSelectedTypes(types);
+	const collectionFields = FIELD_TYPES;
+
+	const getMainFieldName = (type: string) => {
+		for (const field of collectionFields) {
+			if (field.types.some((t) => t.type === type)) {
+				return field.name;
+			}
 		}
-	}, [collection]);
-
-	/**
-	 * Saves the updated collection fields to the context.
-	 * Updates the collection with the new field configuration.
-	 */
-	const saveChanges = () => {
-		if (!collection) return;
-
-		const fields: CollectionField[] = selectedFields.map((field_name) => ({
-			field_name,
-			type: selectedTypes[field_name],
-			label: getMainFieldName(selectedTypes[field_name]),
-		}));
-
-		const updatedCollection = {
-			...collection,
-			fields,
-		};
-
-		addCollection(updatedCollection);
+		return type;
 	};
 
-	/**
-	 * Maps icon names to their corresponding icon components.
-	 *
-	 * @param iconName - The name of the icon to retrieve
-	 * @returns The icon component or a default FileText icon
-	 */
 	const getIcon = (iconName: string) => {
 		switch (iconName) {
 			case "FileText":
@@ -146,128 +235,134 @@ const CollectionBuilds = () => {
 				return <Calendar className="h-4 w-4 text-muted-foreground" />;
 			case "Image":
 				return <ImageIcon className="h-4 w-4 text-muted-foreground" />;
+			case "ToggleLeft":
+				return <ToggleLeft className="h-4 w-4 text-muted-foreground" />;
+			case "Hash":
+				return <Hash className="h-4 w-4 text-muted-foreground" />;
+			case "Globe":
+				return <Globe className="h-4 w-4 text-muted-foreground" />;
+			case "Palette":
+				return <Palette className="h-4 w-4 text-muted-foreground" />;
 			default:
 				return <FileText className="h-4 w-4 text-muted-foreground" />;
 		}
 	};
 
 	/**
-	 * Retrieves the main field name for a given field type.
-	 * Searches through available field types to find the matching category name.
-	 *
-	 * @param type - The field type to look up
-	 * @returns The main field name or the type itself if not found
+	 * Persist changes to the database immediately.
 	 */
-	const getMainFieldName = (type: string) => {
-		for (const field of collectionFields) {
-			if (field.types.some((t) => t.type === type)) {
-				return field.name;
-			}
+	const persistCollectionUpdate = async (newFields: CollectionField[]) => {
+		if (!collection) return;
+
+		const updatedCollection = {
+			id: collection.id,
+			name: collection.name,
+			singular: collection.singular,
+			plural: collection.plural,
+			type: collection.type,
+			fields: newFields,
+		};
+
+		try {
+			await updateCollection(collection.id, updatedCollection);
+		} catch (error) {
+			console.error("Auto-save failed:", error);
+			toast.error("Failed to save changes.");
 		}
-		return type;
 	};
 
-	const collectionFields = FIELD_TYPES;
-
-	/**
-	 * Updates the selected type for a field without opening the field name dialog.
-	 * Used for single-type fields that don't require user-defined names.
-	 *
-	 * @param fieldName - The name of the field
-	 * @param type - The type to select for the field
-	 */
-	const handleTypeSelect = (fieldName: string, type: string) => {
-		setSelectedTypes((prev) => ({ ...prev, [fieldName]: type }));
+	const handleSidebarTypeSelect = (groupName: string, type: string) => {
+		setSidebarSelections((prev) => ({ ...prev, [groupName]: type }));
 	};
 
-	/**
-	 * Initiates the request to add a field by opening the field name dialog.
-	 * Allows the user to specify a custom name for the field before adding it.
-	 *
-	 * @param fieldName - The field type name
-	 * @param type - The specific type variant
-	 */
-	const addSelectedFieldRequest = (fieldName: string, type: string) => {
-		// Prevent adding more than 1 field for single-type collections
-		if (collection?.type === "single" && selectedFields.length >= 1) {
+	const addSelectedFieldRequest = (groupName: string, type: string) => {
+		if (collection?.type === "single" && currentFields.length >= 1) {
 			toast.error("Single types can only have one field.");
 			return;
 		}
 
-		setSelectedTypes((prev) => ({ ...prev, [fieldName]: type }));
-		setFieldBeingAdded({ fieldName, type, field_name: "" });
+		setSidebarSelections((prev) => ({ ...prev, [groupName]: type }));
+		setFieldBeingAdded({ fieldName: groupName, type, field_name: "" });
 		setFieldNameError("");
 		setShowFieldNameDialog(true);
 	};
 
-	/**
-	 * Adds a field to the selected fields list if it doesn't already exist.
-	 * Updates both the field type mapping and the field list.
-	 *
-	 * @param type - The field type
-	 * @param field_name - The custom name assigned to the field
-	 */
-	const addSelectedField = (type: string, field_name: string) => {
-		if (selectedFields.includes(field_name)) {
+	const addSelectedField = async (type: string, field_name: string) => {
+		if (currentFields.some((f) => f.field_name === field_name)) {
+			toast.error("Field already exists.");
 			return;
 		}
 
-		if (collection?.type === "single" && selectedFields.length >= 1) {
+		if (collection?.type === "single" && currentFields.length >= 1) {
 			toast.error("Single types can only have one field.");
 			return;
 		}
-		setSelectedTypes((prev) => ({ ...prev, [field_name]: type }));
-		setSelectedFields((prev) => [...prev, field_name]);
+
+		const newField: CollectionField = {
+			field_name,
+			type,
+			label: getMainFieldName(type),
+		};
+
+		const newFields = [...currentFields, newField];
+
+		await persistCollectionUpdate(newFields);
+		toast.success(`Field "${field_name}" added.`);
+
 		setFieldBeingAdded(null);
 		setShowFieldNameDialog(false);
 	};
 
-	/**
-	 * Removes a field from the selected fields list and its type mapping.
-	 *
-	 * @param field_name - The name of the field to remove
-	 */
-	const removeSelectedField = (field_name: string) => {
-		setSelectedFields((prev) => prev.filter((f) => f !== field_name));
-		setSelectedTypes((prev) => {
-			const copy = { ...prev };
-			delete copy[field_name];
-			return copy;
-		});
+	const removeField = async (field_name: string) => {
+		const newFields = currentFields.filter((f) => f.field_name !== field_name);
+		await persistCollectionUpdate(newFields);
+		toast.success(`Field "${field_name}" removed.`);
+	};
+
+	const handleDragEnd = async (event: DragEndEvent) => {
+		const { active, over } = event;
+
+		if (over && active.id !== over.id) {
+			const oldIndex = currentFields.findIndex(
+				(f) => f.field_name === active.id,
+			);
+			const newIndex = currentFields.findIndex((f) => f.field_name === over.id);
+
+			const newFields = arrayMove(currentFields, oldIndex, newIndex);
+
+			await persistCollectionUpdate(newFields);
+		}
 	};
 
 	const filteredFields = collectionFields.filter((field) =>
 		field.name.toLowerCase().includes(search.toLowerCase()),
 	);
 
-	const handleDragEnd = (event: DragEndEvent) => {
-		const { active, over } = event;
-
-		if (over && active.id !== over.id) {
-			setSelectedFields((items) => {
-				const oldIndex = items.indexOf(active.id as string);
-				const newIndex = items.indexOf(over.id as string);
-
-				return arrayMove(items, oldIndex, newIndex);
-			});
-		}
-	};
+	const filteredCurrentFields = currentFields.filter(
+		(f) =>
+			f.field_name.toLowerCase().includes(currentFieldsSearch.toLowerCase()) ||
+			f.label.toLowerCase().includes(currentFieldsSearch.toLowerCase()),
+	);
 
 	if (!collection) {
-		return <div>Collection not found</div>;
+		return (
+			<EmptyState
+				icon={FileText}
+				title="Collection Not Found"
+				description="The collection you're looking for doesn't exist or has been deleted."
+			/>
+		);
 	}
 
 	const SortableItem = ({
-		field_name,
-		field_type,
-		removeSelectedField,
+		field,
+		onRemove,
 	}: {
-		field_name: string;
-		field_type: string;
-		removeSelectedField: (field_name: string) => void;
+		field: CollectionField;
+		onRemove: (name: string) => void;
 	}) => {
 		const { attributes, listeners, setNodeRef, transform, transition } =
-			useSortable({ id: field_name });
+			useSortable({ id: field.field_name });
 
 		const style = {
 			transform: CSS.Transform.toString(transform),
@@ -293,16 +388,16 @@ const CollectionBuilds = () => {
 						<GripVertical className="h-5 w-5 text-primary" />
 					</button>
 					<div>
-						<div className="text-sm font-medium">{field_name}</div>
+						<div className="text-sm font-medium">{field.field_name}</div>
 						<div className="text-xs text-muted-foreground">
-							{getMainFieldName(field_type)} - {field_type}
+							{field.label} - {field.type}
 						</div>
 					</div>
 				</div>
 				<Button
 					variant="ghost"
 					size="sm"
-					onClick={() => removeSelectedField(field_name)}
+					onClick={() => onRemove(field.field_name)}
 				>
 					Remove
 				</Button>
@@ -313,110 +408,89 @@ const CollectionBuilds = () => {
 	return (
 		<TooltipProvider>
 			<div className="flex w-full justify-between">
-				<div className="w-1/2 py-3 border-r">
-					<div className="relative">
+				<div className="w-1/2 py-3 border-r flex flex-col h-full overflow-hidden">
+					<div className="flex-none">
 						<CollectionTypesHeader
 							title={`Current Fields: ${collection.name}`}
 							tagline="View and manage existing fields"
-						/>
-						<div className="absolute right-4 top-3">
-							<Button
-								variant="destructive"
-								size="sm"
-								onClick={() => setShowDeleteDialog(true)}
-							>
-								<Trash2 className="h-4 w-4 mr-2" />
-								Delete Collection
-							</Button>
-						</div>
-					</div>
-					<div className="px-4 py-3 space-y-4">
-						{selectedFields.length === 0 ? (
-							<div className="text-sm text-muted-foreground">
-								No fields configured.
-							</div>
-						) : (
-							<DndContext
-								sensors={sensors}
-								collisionDetection={closestCenter}
-								onDragEnd={handleDragEnd}
-							>
-								<SortableContext
-									items={selectedFields}
-									strategy={verticalListSortingStrategy}
-								>
-									<div className="space-y-3">
-										{selectedFields.map((field_name) => (
-											<SortableItem
-												key={field_name}
-												field_name={field_name}
-												field_type={selectedTypes[field_name]}
-												removeSelectedField={removeSelectedField}
-											/>
-										))}
-									</div>
-								</SortableContext>
-							</DndContext>
-						)}
-						{selectedFields.length > 0 && (
-							<div className="pt-4 border-t">
+							actions={
 								<Button
-									className="w-full"
-									onClick={() => setShowSaveDialog(true)}
+									variant="destructive"
+									size="sm"
+									onClick={() => setShowDeleteDialog(true)}
 								>
-									Save Changes
+									<Trash2 className="h-4 w-4 mr-2" />
 								</Button>
-								<Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
-									<DialogContent>
-										<DialogHeader>
-											<DialogTitle>Save Changes</DialogTitle>
-										</DialogHeader>
-										<div className="space-y-2">
-											<p>Save the changes to this collection?</p>
-										</div>
-										<DialogFooter>
-											<DialogClose asChild>
-												<Button variant="ghost">Cancel</Button>
-											</DialogClose>
-											<Button
-												onClick={() => {
-													saveChanges();
-													setShowSaveDialog(false);
-													toast.success("Collection updated successfully.");
-												}}
-											>
-												Save
-											</Button>
-										</DialogFooter>
-									</DialogContent>
-								</Dialog>
-							</div>
-						)}
-					</div>
-				</div>
-				<div className="w-1/2 py-3">
-					<CollectionTypesHeader
-						title="Add More Fields"
-						tagline="Select additional fields to add to this collection"
-					/>
-					<div className="px-4 py-3 space-y-4">
-						<Input
-							placeholder="Search fields..."
-							value={search}
-							onChange={(e) => setSearch(e.target.value)}
-							className="mb-4"
+							}
 						/>
-						{filteredFields.map((fieldGroup) => (
-							<FieldCard
-								key={fieldGroup.name}
-								fieldGroup={fieldGroup}
-								selectedTypes={selectedTypes}
-								handleTypeSelect={handleTypeSelect}
-								getIcon={getIcon}
-								onAdd={addSelectedFieldRequest}
-							/>
-						))}
 					</div>
+				
+						<div className="px-4 py-3 space-y-4">
+							<Input
+								placeholder="Search current fields..."
+								value={currentFieldsSearch}
+								onChange={(e) => setCurrentFieldsSearch(e.target.value)}
+								className="mb-4"
+							/>
+							{filteredCurrentFields.length === 0 ? (
+								<div className="text-sm text-muted-foreground">
+									{currentFields.length === 0
+										? "No fields configured."
+										: "No matching fields found."}
+								</div>
+							) : (
+								<DndContext
+									sensors={sensors}
+									collisionDetection={closestCenter}
+									onDragEnd={handleDragEnd}
+								>
+										<ScrollArea className="h-[calc(100vh-200px)] w-full py-2 min-h-0 overflow-auto bg-background px-2 border">
+											<SortableContext
+												items={filteredCurrentFields.map((f) => f.field_name)}
+												strategy={verticalListSortingStrategy}
+											>
+												<div className="space-y-3">
+													{filteredCurrentFields.map((field) => (
+												<SortableItem
+													key={field.field_name}
+													field={field}
+													onRemove={removeField}
+												/>
+											))}
+										</div>
+									</SortableContext>
+									</ScrollArea>
+								</DndContext>
+							)}
+						</div>
+				</div>
+				<div className="w-1/2 py-3 flex flex-col h-full overflow-hidden">
+					<div className="flex-none">
+						<CollectionTypesHeader
+							title="Add More Fields"
+							tagline="Select additional fields to add to this collection"
+						/>
+					</div>
+						<div className="px-4 py-3 space-y-4">
+							<Input
+								placeholder="Search fields..."
+								value={search}
+								onChange={(e) => setSearch(e.target.value)}
+								className="mb-4"
+							/>
+					<ScrollArea className="h-[calc(100vh-200px)] w-full py-2 min-h-0 overflow-auto bg-background px-2 border">
+							{filteredFields.map((fieldGroup) => (
+								<FieldCard
+									key={fieldGroup.name}
+									fieldGroup={fieldGroup}
+									selectedTypes={sidebarSelections}
+									handleTypeSelect={handleSidebarTypeSelect}
+									getIcon={getIcon}
+									onAdd={addSelectedFieldRequest}
+								/>
+							))}
+					</ScrollArea>
+						</div>
 				</div>
 			</div>
 
@@ -424,6 +498,10 @@ const CollectionBuilds = () => {
 				<DialogContent>
 					<DialogHeader>
 						<DialogTitle>Delete Collection</DialogTitle>
+						<DialogDescription>
+							This action cannot be undone. All data associated with this
+							collection will be permanently removed.
+						</DialogDescription>
 					</DialogHeader>
 					<div className="space-y-2">
 						<p>
@@ -454,28 +532,34 @@ const CollectionBuilds = () => {
 				<DialogContent>
 					<DialogHeader>
 						<DialogTitle>Enter Field Name</DialogTitle>
+						<DialogDescription>
+							Enter a unique name for this field. Use camelCase (e.g., authorId,
+							isPublished).
+						</DialogDescription>
 					</DialogHeader>
 
 					<div className="space-y-2">
-						<Label htmlFor="fieldName">Field Name</Label>
+						<Label htmlFor="fieldName">Field Name (camelCase)</Label>
 						<Input
 							id="fieldName"
+							placeholder="e.g., authorId, publishedAt, isPublished, tags"
 							value={fieldBeingAdded?.field_name || ""}
 							onChange={(e) => {
 								const value = e.target.value;
 								setFieldBeingAdded((prev) =>
 									prev ? { ...prev, field_name: value } : prev,
 								);
-								const result = fieldNameSchema.safeParse(value);
-								if (result.success) {
-									setFieldNameError("");
-								} else {
-									setFieldNameError(result.error.issues[0].message);
-								}
+								const errorMsg = validateFieldName(value.trim());
+								setFieldNameError(errorMsg);
 							}}
 						/>
 						{fieldNameError && (
 							<div className="text-sm text-red-500">{fieldNameError}</div>
+						)}
+						{fieldBeingAdded?.field_name?.trim() && !fieldNameError && (
+							<div className="text-xs text-green-600">
+								✓ Field name is valid
+							</div>
 						)}
 					</div>
 
@@ -486,10 +570,10 @@ const CollectionBuilds = () => {
 						<Button
 							onClick={() => {
 								if (fieldBeingAdded?.field_name?.trim() && !fieldNameError) {
-									addSelectedField(
-										fieldBeingAdded.type,
+									const normalized = normalizeToCamelCase(
 										fieldBeingAdded.field_name.trim(),
 									);
+									addSelectedField(fieldBeingAdded.type, normalized);
 								}
 							}}
 							disabled={

@@ -3,12 +3,14 @@ import {
 	Database,
 	Edit,
 	FileText,
+	Loader2,
 	Newspaper,
 	Plus,
 	Trash2,
 } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { toast } from "sonner";
 import DashboardLayout from "@/components/DashboardLayout";
 import { FieldRenderer } from "@/components/fields/FieldRenderer";
 import PageHeader from "@/components/PageHeader";
@@ -16,43 +18,38 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCollections } from "@/contexts/CollectionsContext";
-
-interface ContentItem {
-	id: string;
-	collectionId: string;
-	data: Record<string, string | string[] | number | boolean | null | undefined>;
-	createdAt: string;
-	updatedAt: string;
-}
-
-interface Collection {
-	id: string;
-	name: string;
-	singular: string;
-	plural: string;
-	type: "collection" | "single";
-	fields: Array<{ field_name: string; type: string; label: string }>;
-}
+import {
+	type Item,
+	useCreateItemMutation,
+	useDeleteItemMutation,
+	useItemsQuery,
+	useUpdateItemMutation,
+} from "@/hooks/tanstack/useItems";
+import { getFieldType } from "@/types/fields";
+import type { Collection } from "@/types/types";
 
 export default function ContentManager() {
 	const { collections } = useCollections();
 	const [selectedCollection, setSelectedCollection] =
 		useState<Collection | null>(null);
-	const [contentItems, setContentItems] = useState<ContentItem[]>(() => {
-		const stored = localStorage.getItem("contentItems");
-		return stored ? JSON.parse(stored) : [];
-	});
+
+	const { data: contentItems = [], isLoading: isLoadingItems } = useItemsQuery(
+		selectedCollection?.id || "",
+		{ enabled: !!selectedCollection },
+	);
+
+	const createItemMutation = useCreateItemMutation(
+		selectedCollection?.id || "",
+	);
+	const updateItemMutation = useUpdateItemMutation();
+	const deleteItemMutation = useDeleteItemMutation();
+
 	const [isEditing, setIsEditing] = useState(false);
-	const [editingItem, setEditingItem] = useState<ContentItem | null>(null);
+	const [editingItem, setEditingItem] = useState<Item | null>(null);
 	const [formData, setFormData] = useState<
 		Record<string, string | string[] | number | boolean | null | undefined>
 	>({});
 	const [errors, setErrors] = useState<Record<string, string>>({});
-
-	const saveContentItems = (items: ContentItem[]) => {
-		setContentItems(items);
-		localStorage.setItem("contentItems", JSON.stringify(items));
-	};
 
 	const handleCreateContent = () => {
 		setFormData({});
@@ -61,7 +58,7 @@ export default function ContentManager() {
 		setIsEditing(true);
 	};
 
-	const handleEditContent = (item: ContentItem) => {
+	const handleEditContent = (item: Item) => {
 		setFormData(item.data);
 		setErrors({});
 		setEditingItem(item);
@@ -80,8 +77,33 @@ export default function ContentManager() {
 		if (selectedCollection) {
 			selectedCollection.fields.forEach((field) => {
 				const value = formData[field.field_name];
-				if (!value || (typeof value === "string" && value.trim() === "")) {
-					newErrors[field.field_name] = `${field.field_name} is required`;
+				const fieldDef = getFieldType(field.type);
+
+				if (
+					value === undefined ||
+					value === null ||
+					(typeof value === "string" && value.trim() === "")
+				) {
+					newErrors[field.field_name] = `${field.label} is required`;
+				}
+
+				if (fieldDef?.validation && value) {
+					if (typeof value === "string") {
+						if (
+							fieldDef.validation.maxLength &&
+							value.length > fieldDef.validation.maxLength
+						) {
+							newErrors[field.field_name] =
+								`${field.label} must be ${fieldDef.validation.maxLength} characters or less`;
+						}
+						if (
+							fieldDef.validation.minLength &&
+							value.length < fieldDef.validation.minLength
+						) {
+							newErrors[field.field_name] =
+								`${field.label} must be at least ${fieldDef.validation.minLength} characters`;
+						}
+					}
 				}
 			});
 		}
@@ -89,37 +111,39 @@ export default function ContentManager() {
 		return Object.keys(newErrors).length === 0;
 	};
 
-	const handleSaveContent = () => {
+	const handleSaveContent = async () => {
 		if (!selectedCollection || !validateForm()) return;
 
-		const now = new Date().toISOString();
-		const contentItem: ContentItem = {
-			id: editingItem?.id || Date.now().toString(),
-			collectionId: selectedCollection.id,
-			data: formData,
-			createdAt: editingItem?.createdAt || now,
-			updatedAt: now,
-		};
-
-		const updatedItems = editingItem
-			? contentItems.map((item) =>
-					item.id === editingItem.id ? contentItem : item,
-				)
-			: [...contentItems, contentItem];
-
-		saveContentItems(updatedItems);
-		setIsEditing(false);
-		setFormData({});
-		setEditingItem(null);
+		try {
+			if (editingItem) {
+				await updateItemMutation.mutateAsync({
+					id: editingItem._id,
+					data: formData,
+				});
+				toast.success("Content updated successfully");
+			} else {
+				await createItemMutation.mutateAsync(formData);
+				toast.success("Content created successfully");
+			}
+			setIsEditing(false);
+			setFormData({});
+			setEditingItem(null);
+		} catch (error) {
+			console.error("Failed to save content", error);
+			toast.error("Failed to save content");
+		}
 	};
 
-	const handleDeleteContent = (itemId: string) => {
-		const updatedItems = contentItems.filter((item) => item.id !== itemId);
-		saveContentItems(updatedItems);
-	};
-
-	const getCollectionContent = (collectionId: string) => {
-		return contentItems.filter((item) => item.collectionId === collectionId);
+	const handleDeleteContent = async (itemId: string) => {
+		if (confirm("Are you sure you want to delete this item?")) {
+			try {
+				await deleteItemMutation.mutateAsync(itemId);
+				toast.success("Item deleted");
+			} catch (error) {
+				console.error("Failed to delete item", error);
+				toast.error("Failed to delete item");
+			}
+		}
 	};
 
 	const collectionTypes = collections.filter((c) => c.type === "collection");
@@ -155,7 +179,7 @@ export default function ContentManager() {
 				description="Create and manage your content items."
 			/>
 			<div className="w-full flex h-screen">
-				<ScrollArea className="bg-sidebar py-4 pr-2 w-80 overflow-y-auto">
+				<ScrollArea className="bg-sidebar py-4 pr-2 w-80 overflow-y-auto border-r">
 					<div className="px-2 mb-6 sticky top-0 bg-sidebar pt-4 pb-2 z-10">
 						<Link
 							to="/collection-types-builder"
@@ -187,7 +211,6 @@ export default function ContentManager() {
 									</div>
 									<ul className="space-y-1 ml-6">
 										{section.items.map((item) => {
-											const content = getCollectionContent(item.id);
 											return (
 												<li key={item.name}>
 													<button
@@ -195,12 +218,6 @@ export default function ContentManager() {
 														onClick={() => {
 															setSelectedCollection(item.collection);
 															setIsEditing(false);
-															if (
-																item.collection.type === "single" &&
-																content.length > 0
-															) {
-																handleEditContent(content[0]);
-															}
 														}}
 														className={
 															"w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-accent transition-colors text-left" +
@@ -213,9 +230,6 @@ export default function ContentManager() {
 															{item.icon}
 															<span className="text-sm">{item.name}</span>
 														</div>
-														<span className="text-xs text-muted-foreground">
-															{content.length}
-														</span>
 													</button>
 												</li>
 											);
@@ -228,7 +242,7 @@ export default function ContentManager() {
 
 				<div className="flex-1 p-6">
 					{selectedCollection ? (
-						<div className="max-w-4xl">
+						<div className="w-full min-h-0">
 							<div className="mb-6">
 								<div className="flex items-center justify-between">
 									<div>
@@ -242,7 +256,13 @@ export default function ContentManager() {
 										</p>
 									</div>
 									{!isEditing && (
-										<Button onClick={handleCreateContent}>
+										<Button
+											onClick={handleCreateContent}
+											disabled={
+												selectedCollection.type === "single" &&
+												contentItems.length > 0
+											}
+										>
 											<Plus className="h-4 w-4 mr-2" />
 											{selectedCollection.type === "collection"
 												? "Add Entry"
@@ -254,18 +274,17 @@ export default function ContentManager() {
 
 							{isEditing ? (
 								<Card>
-									<CardContent className="p-6">
-										<div className="mb-6">
-											<h2 className="text-lg font-semibold">
-												{editingItem ? "Edit" : "Create"} Content
-											</h2>
-											<p className="text-sm text-muted-foreground">
-												Fill in the fields below to{" "}
-												{editingItem ? "update" : "create"} your content.
-											</p>
-										</div>
-
-										<ScrollArea className="max-h-[60vh] pr-4">
+									<ScrollArea className="h-[calc(100vh-200px)] min-h-0">
+										<CardContent>
+											<div className="mb-6">
+												<h2 className="text-lg font-semibold">
+													{editingItem ? "Edit" : "Create"} Content
+												</h2>
+												<p className="text-sm text-muted-foreground">
+													Fill in the fields below to{" "}
+													{editingItem ? "update" : "create"} your content.
+												</p>
+											</div>
 											<div className="space-y-6">
 												{selectedCollection.fields.map((field) => (
 													<FieldRenderer
@@ -282,22 +301,35 @@ export default function ContentManager() {
 													/>
 												))}
 											</div>
-										</ScrollArea>
-
-										<div className="flex justify-end gap-3 mt-6 pt-6">
-											<Button variant="outline" onClick={handleCancelEdit}>
-												Cancel
-											</Button>
-											<Button onClick={handleSaveContent}>
-												{editingItem ? "Update" : "Create"} Content
-											</Button>
-										</div>
-									</CardContent>
+											<div className="flex gap-3 py-3 justify-end">
+												<Button variant="outline" onClick={handleCancelEdit}>
+													Cancel
+												</Button>
+												<Button
+													onClick={handleSaveContent}
+													disabled={
+														createItemMutation.isPending ||
+														updateItemMutation.isPending
+													}
+												>
+													{(createItemMutation.isPending ||
+														updateItemMutation.isPending) && (
+														<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+													)}
+													{editingItem ? "Update" : "Create"} Content
+												</Button>
+											</div>
+										</CardContent>
+									</ScrollArea>
 								</Card>
+							) : isLoadingItems ? (
+								<div className="flex items-center justify-center p-12">
+									<Loader2 className="h-8 w-8 animate-spin text-primary" />
+								</div>
 							) : selectedCollection.type === "collection" ? (
 								<div className="space-y-4">
 									<h2 className="text-lg font-semibold">Content Entries</h2>
-									{getCollectionContent(selectedCollection.id).length === 0 ? (
+									{contentItems.length === 0 ? (
 										<Card>
 											<CardContent className="flex flex-col items-center justify-center py-12">
 												<FileText className="h-12 w-12 text-muted-foreground mb-4" />
@@ -311,46 +343,49 @@ export default function ContentManager() {
 										</Card>
 									) : (
 										<div className="space-y-2">
-											{getCollectionContent(selectedCollection.id).map(
-												(item) => (
-													<Card key={item.id}>
-														<CardContent className="p-4">
-															<div className="flex items-center justify-between">
-																<span className="font-medium">
-																	{String(
-																		item.data[
-																			selectedCollection.fields[0]?.field_name
-																		] || "Untitled",
-																	)}
-																</span>
-																<div className="flex gap-2">
-																	<Button
-																		variant="outline"
-																		size="sm"
-																		onClick={() => handleEditContent(item)}
-																	>
-																		<Edit className="h-4 w-4" />
-																	</Button>
-																	<Button
-																		variant="outline"
-																		size="sm"
-																		onClick={() => handleDeleteContent(item.id)}
-																	>
-																		<Trash2 className="h-4 w-4" />
-																	</Button>
-																</div>
+											{contentItems.map((item) => (
+												<Card key={item._id}>
+													<CardContent className="p-4">
+														<div className="flex items-center justify-between">
+															<span className="font-medium">
+																{(() => {
+																	const firstField =
+																		selectedCollection.fields[0];
+																	const val = item.data[firstField?.field_name];
+																	if (!val) return "Untitled";
+																	if (typeof val === "string") return val;
+																	if (typeof val === "number")
+																		return String(val);
+																	return "Content Item";
+																})()}
+															</span>
+															<div className="flex gap-2">
+																<Button
+																	variant="outline"
+																	size="sm"
+																	onClick={() => handleEditContent(item)}
+																>
+																	<Edit className="h-4 w-4" />
+																</Button>
+																<Button
+																	variant="outline"
+																	size="sm"
+																	onClick={() => handleDeleteContent(item._id)}
+																>
+																	<Trash2 className="h-4 w-4" />
+																</Button>
 															</div>
-														</CardContent>
-													</Card>
-												),
-											)}
+														</div>
+													</CardContent>
+												</Card>
+											))}
 										</div>
 									)}
 								</div>
 							) : (
 								<div className="space-y-4">
 									<h2 className="text-lg font-semibold">Content Entry</h2>
-									{getCollectionContent(selectedCollection.id).length === 0 ? (
+									{contentItems.length === 0 ? (
 										<Card>
 											<CardContent className="p-6">
 												<div className="text-center mb-4">
@@ -373,11 +408,7 @@ export default function ContentManager() {
 													</h3>
 													<Button
 														variant="outline"
-														onClick={() =>
-															handleEditContent(
-																getCollectionContent(selectedCollection.id)[0],
-															)
-														}
+														onClick={() => handleEditContent(contentItems[0])}
 													>
 														<Edit className="h-4 w-4 mr-2" />
 														Edit
@@ -396,10 +427,18 @@ export default function ContentManager() {
 																id={`field-display-${field.field_name}`}
 																className="text-sm"
 															>
-																{String(
-																	getCollectionContent(selectedCollection.id)[0]
-																		.data[field.field_name] || "Not set",
-																)}
+																{(() => {
+																	const val =
+																		contentItems[0].data[field.field_name];
+																	if (val === undefined || val === null)
+																		return "Not set";
+																	if (typeof val === "string") return val;
+																	if (typeof val === "number")
+																		return String(val);
+																	if (Array.isArray(val))
+																		return `[${val.length} items]`;
+																	return JSON.stringify(val);
+																})()}
 															</p>
 														</div>
 													))}

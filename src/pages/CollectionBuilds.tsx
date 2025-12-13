@@ -1,12 +1,31 @@
 import {
+	closestCenter,
+	DndContext,
+	type DragEndEvent,
+	KeyboardSensor,
+	PointerSensor,
+	useSensor,
+	useSensors,
+} from "@dnd-kit/core";
+import {
+	arrayMove,
+	SortableContext,
+	sortableKeyboardCoordinates,
+	useSortable,
+	verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import {
 	Calendar,
 	Edit,
 	FileText,
+	GripVertical,
 	Image as ImageIcon,
 	Trash2,
 } from "lucide-react";
 import React, { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { toast } from "sonner";
 import { z } from "zod";
 import FieldCard from "@/components/FieldCard";
 import { Button } from "@/components/ui/button";
@@ -59,6 +78,12 @@ const CollectionBuilds = () => {
 		{},
 	);
 	const [selectedFields, setSelectedFields] = useState<string[]>([]);
+	const sensors = useSensors(
+		useSensor(PointerSensor),
+		useSensor(KeyboardSensor, {
+			coordinateGetter: sortableKeyboardCoordinates,
+		}),
+	);
 	const [search, setSearch] = useState("");
 	const [fieldBeingAdded, setFieldBeingAdded] = useState<{
 		fieldName: string;
@@ -68,6 +93,7 @@ const CollectionBuilds = () => {
 	const [showFieldNameDialog, setShowFieldNameDialog] = useState(false);
 	const [fieldNameError, setFieldNameError] = useState<string>("");
 	const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+	const [showSaveDialog, setShowSaveDialog] = useState(false);
 
 	const collection = id ? collections.find((c) => c.id === id) : null;
 
@@ -162,6 +188,12 @@ const CollectionBuilds = () => {
 	 * @param type - The specific type variant
 	 */
 	const addSelectedFieldRequest = (fieldName: string, type: string) => {
+		// Prevent adding more than 1 field for single-type collections
+		if (collection?.type === "single" && selectedFields.length >= 1) {
+			toast.error("Single types can only have one field.");
+			return;
+		}
+
 		setSelectedTypes((prev) => ({ ...prev, [fieldName]: type }));
 		setFieldBeingAdded({ fieldName, type, field_name: "" });
 		setFieldNameError("");
@@ -177,6 +209,11 @@ const CollectionBuilds = () => {
 	 */
 	const addSelectedField = (type: string, field_name: string) => {
 		if (selectedFields.includes(field_name)) {
+			return;
+		}
+
+		if (collection?.type === "single" && selectedFields.length >= 1) {
+			toast.error("Single types can only have one field.");
 			return;
 		}
 		setSelectedTypes((prev) => ({ ...prev, [field_name]: type }));
@@ -203,9 +240,75 @@ const CollectionBuilds = () => {
 		field.name.toLowerCase().includes(search.toLowerCase()),
 	);
 
+	const handleDragEnd = (event: DragEndEvent) => {
+		const { active, over } = event;
+
+		if (over && active.id !== over.id) {
+			setSelectedFields((items) => {
+				const oldIndex = items.indexOf(active.id as string);
+				const newIndex = items.indexOf(over.id as string);
+
+				return arrayMove(items, oldIndex, newIndex);
+			});
+		}
+	};
+
 	if (!collection) {
 		return <div>Collection not found</div>;
 	}
+
+	const SortableItem = ({
+		field_name,
+		field_type,
+		removeSelectedField,
+	}: {
+		field_name: string;
+		field_type: string;
+		removeSelectedField: (field_name: string) => void;
+	}) => {
+		const { attributes, listeners, setNodeRef, transform, transition } =
+			useSortable({ id: field_name });
+
+		const style = {
+			transform: CSS.Transform.toString(transform),
+			transition,
+		};
+
+		return (
+			<div
+				ref={setNodeRef}
+				style={style}
+				{...attributes}
+				className="flex items-center justify-between p-3 border rounded bg-muted/50"
+			>
+				<div className="flex items-center gap-3">
+					<button
+						type="button"
+						{...listeners}
+						{...attributes}
+						aria-label="Drag field"
+						className="cursor-move touch-none p-1 bg-transparent"
+						style={{ touchAction: "none" }}
+					>
+						<GripVertical className="h-5 w-5 text-primary" />
+					</button>
+					<div>
+						<div className="text-sm font-medium">{field_name}</div>
+						<div className="text-xs text-muted-foreground">
+							{getMainFieldName(field_type)} - {field_type}
+						</div>
+					</div>
+				</div>
+				<Button
+					variant="ghost"
+					size="sm"
+					onClick={() => removeSelectedField(field_name)}
+				>
+					Remove
+				</Button>
+			</div>
+		);
+	};
 
 	return (
 		<TooltipProvider>
@@ -233,35 +336,60 @@ const CollectionBuilds = () => {
 								No fields configured.
 							</div>
 						) : (
-							<div className="space-y-3">
-								{selectedFields.map((field_name) => (
-									<div
-										key={field_name}
-										className="flex items-center justify-between p-3 border rounded bg-muted/50"
-									>
-										<div>
-											<div className="text-sm font-medium">{field_name}</div>
-											<div className="text-xs text-muted-foreground">
-												{getMainFieldName(selectedTypes[field_name])} -{" "}
-												{selectedTypes[field_name]}
-											</div>
-										</div>
-										<Button
-											variant="ghost"
-											size="sm"
-											onClick={() => removeSelectedField(field_name)}
-										>
-											Remove
-										</Button>
+							<DndContext
+								sensors={sensors}
+								collisionDetection={closestCenter}
+								onDragEnd={handleDragEnd}
+							>
+								<SortableContext
+									items={selectedFields}
+									strategy={verticalListSortingStrategy}
+								>
+									<div className="space-y-3">
+										{selectedFields.map((field_name) => (
+											<SortableItem
+												key={field_name}
+												field_name={field_name}
+												field_type={selectedTypes[field_name]}
+												removeSelectedField={removeSelectedField}
+											/>
+										))}
 									</div>
-								))}
-							</div>
+								</SortableContext>
+							</DndContext>
 						)}
 						{selectedFields.length > 0 && (
 							<div className="pt-4 border-t">
-								<Button className="w-full" onClick={saveChanges}>
+								<Button
+									className="w-full"
+									onClick={() => setShowSaveDialog(true)}
+								>
 									Save Changes
 								</Button>
+								<Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
+									<DialogContent>
+										<DialogHeader>
+											<DialogTitle>Save Changes</DialogTitle>
+										</DialogHeader>
+										<div className="space-y-2">
+											<p>Save the changes to this collection?</p>
+										</div>
+										<DialogFooter>
+											<DialogClose asChild>
+												<Button variant="ghost">Cancel</Button>
+											</DialogClose>
+											<Button
+												onClick={() => {
+													saveChanges();
+													setShowSaveDialog(false);
+													toast.success("Collection updated successfully.");
+												}}
+											>
+												Save
+											</Button>
+										</DialogFooter>
+									</DialogContent>
+								</Dialog>
 							</div>
 						)}
 					</div>

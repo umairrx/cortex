@@ -1,9 +1,9 @@
 import {
+	IconApi,
 	IconFileText,
 	IconHome,
 	IconPhoto,
 	IconSettings,
-	IconApi,
 } from "@tabler/icons-react";
 
 /**

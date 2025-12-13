@@ -1,11 +1,10 @@
-import { createContext, useState, useEffect } from "react";
-import type { ReactNode } from "react";
 import axios from "axios";
+import type { ReactNode } from "react";
+import { createContext, useEffect, useState } from "react";
 
 const API_BASE_URL =
 	import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api";
 
-// Create axios instance outside
 const api = axios.create({
 	baseURL: API_BASE_URL,
 });

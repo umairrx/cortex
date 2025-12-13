@@ -1,12 +1,10 @@
 import {
 	createContext,
-	useContext,
-	useState,
-	useEffect,
 	type ReactNode,
+	useContext,
+	useEffect,
+	useState,
 } from "react";
-
-/* eslint-disable react-refresh/only-export-components */
 
 interface CollectionField {
 	field_name: string;
@@ -17,6 +15,8 @@ interface CollectionField {
 interface Collection {
 	id: string;
 	name: string;
+	singular: string;
+	plural: string;
 	type: "collection" | "single";
 	fields: CollectionField[];
 }
@@ -52,7 +52,6 @@ export const CollectionsProvider = ({ children }: { children: ReactNode }) => {
 	useEffect(() => {
 		const stored = localStorage.getItem("collections");
 		if (stored) {
-			// eslint-disable-next-line react-hooks/set-state-in-effect
 			setCollections(JSON.parse(stored));
 		}
 	}, []);

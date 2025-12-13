@@ -129,7 +129,6 @@ export const FieldRenderer = ({
 	);
 };
 
-// Field Components
 const ImageUpload = ({
 	value,
 	onChange,

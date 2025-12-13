@@ -28,6 +28,8 @@ interface ContentItem {
 interface Collection {
 	id: string;
 	name: string;
+	singular: string;
+	plural: string;
 	type: "collection" | "single";
 	fields: Array<{ field_name: string; type: string; label: string }>;
 }
@@ -282,7 +284,7 @@ export default function ContentManager() {
 											</div>
 										</ScrollArea>
 
-										<div className="flex justify-end gap-3 mt-6 pt-6 border-t">
+										<div className="flex justify-end gap-3 mt-6 pt-6">
 											<Button variant="outline" onClick={handleCancelEdit}>
 												Cancel
 											</Button>

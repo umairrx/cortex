@@ -1,66 +1,73 @@
-import * as React from "react";
-
+import type * as React from "react";
+import blackLogo from "@/assets/black-logo.svg";
+import whiteLogo from "@/assets/white-logo.svg";
 import { NavMain } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
-import { useTheme } from "@/components/use-theme";
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
+	Sidebar,
+	SidebarContent,
+	SidebarFooter,
+	SidebarHeader,
+	SidebarMenu,
+	SidebarMenuButton,
+	SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { useTheme } from "@/components/use-theme";
 import { navigationItems } from "@/config/navigation";
 
-import whiteLogo from "@/assets/white-logo.svg";
-import blackLogo from "@/assets/black-logo.svg";
-
+/**
+ * Main application sidebar component that provides navigation and user information.
+ * Displays the Cortex CMS logo, navigation menu, and user profile section.
+ * Adapts logo color based on current theme (light/dark mode).
+ *
+ * @param user - User data containing name, email, and avatar information
+ * @param props - Additional sidebar component properties
+ * @returns The application sidebar with navigation and user section
+ */
 export function AppSidebar({
-  user,
-  ...props
+	user,
+	...props
 }: React.ComponentProps<typeof Sidebar> & {
-  user?: { name: string; email: string; avatar: string };
+	user?: { name: string; email: string; avatar: string };
 }) {
-  const { theme } = useTheme();
-  const defaultUser = {
-    name: "User",
-    email: "user@example.com",
-    avatar: "/avatars/default.jpg",
-  };
+	const { theme } = useTheme();
+	const defaultUser = {
+		name: "User",
+		email: "user@example.com",
+		avatar: "/avatars/default.jpg",
+	};
 
-  const userData = user || defaultUser;
+	const userData = user || defaultUser;
 
-  const logoSrc = theme === "dark" ? whiteLogo : blackLogo;
+	const logoSrc = theme === "dark" ? whiteLogo : blackLogo;
 
-  return (
-    <Sidebar collapsible="offcanvas" {...props}>
-      <SidebarHeader>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              asChild
-              className="data-[slot=sidebar-menu-button]:p-1.5!"
-            >
-              <a href="#" className="flex items-center gap-2">
-                <img
-                  src={logoSrc}
-                  alt="Cortex CMS Logo"
-                  className="h-8 w-auto animate-[spin_3s_linear_infinite]"
-                />
-                <span className="font-semibold">Cortex CMS</span>
-              </a>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarHeader>
-      <SidebarContent>
-        <NavMain items={navigationItems} />
-      </SidebarContent>
-      <SidebarFooter>
-        <NavUser user={userData} />
-      </SidebarFooter>
-    </Sidebar>
-  );
+	return (
+		<Sidebar collapsible="offcanvas" {...props}>
+			<SidebarHeader>
+				<SidebarMenu>
+					<SidebarMenuItem>
+						<SidebarMenuButton
+							asChild
+							className="data-[slot=sidebar-menu-button]:p-1.5!"
+						>
+							<a href="/dashboard" className="flex items-center gap-2">
+								<img
+									src={logoSrc}
+									alt="Cortex CMS Logo"
+									className="h-8 w-auto animate-[spin_3s_linear_infinite]"
+								/>
+								<span className="font-semibold">Cortex CMS</span>
+							</a>
+						</SidebarMenuButton>
+					</SidebarMenuItem>
+				</SidebarMenu>
+			</SidebarHeader>
+			<SidebarContent>
+				<NavMain items={navigationItems} />
+			</SidebarContent>
+			<SidebarFooter>
+				<NavUser user={userData} />
+			</SidebarFooter>
+		</Sidebar>
+	);
 }

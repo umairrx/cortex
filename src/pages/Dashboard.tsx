@@ -9,12 +9,12 @@ import PageHeader from "@/components/PageHeader";
  * @returns The dashboard page with header and welcome content
  */
 export default function Dashboard() {
-  return (
-    <DashboardLayout>
-      <PageHeader
-        title="Dashboard"
-        description="Welcome to the Cortex CMS dashboard."
-      />
-    </DashboardLayout>
-  );
+	return (
+		<DashboardLayout>
+			<PageHeader
+				title="Dashboard"
+				description="Welcome to the Cortex CMS dashboard."
+			/>
+		</DashboardLayout>
+	);
 }

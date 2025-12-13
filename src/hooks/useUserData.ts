@@ -8,13 +8,13 @@ import { useAuth } from "./useAuth";
  * or undefined if no user is authenticated.
  */
 export function useUserData() {
-  const { user } = useAuth();
+	const { user } = useAuth();
 
-  return user
-    ? {
-        name: user.email.split("@")[0],
-        email: user.email,
-        avatar: "/avatars/default.jpg",
-      }
-    : undefined;
+	return user
+		? {
+				name: user.email.split("@")[0],
+				email: user.email,
+				avatar: "/avatars/default.jpg",
+			}
+		: undefined;
 }

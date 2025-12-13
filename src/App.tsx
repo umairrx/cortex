@@ -20,11 +20,10 @@ import ProtectedRoute from "./components/ProtectedRoute.tsx";
 import { Toaster } from "./components/ui/sonner.tsx";
 
 import { useTheme } from "./components/use-theme";
-import CollectionTypesBuilder from "./pages/CollectionTypesBuilder.tsx";
-import BlogBuilder from "./pages/BlogBuilder.tsx";
-import CaseStudyBuilder from "./pages/CaseStudyBuilder.tsx";
-import AboutUsBuilder from "./pages/AboutUsBuilder.tsx";
+import CollectionBuilds from "./pages/CollectionBuilds.tsx";
 import CreateCollection from "./pages/CreateCollection.tsx";
+import SingleCollectionBuilds from "./pages/SingleCollectionBuilds.tsx";
+import CollectionTypesBuilder from "./pages/CollectionTypesBuilder.tsx";
 
 function AppContent() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -91,9 +90,9 @@ function AppContent() {
             }
           >
             <Route index element={<CreateCollection />} />
-            <Route path="blog" element={<BlogBuilder />} />
-            <Route path="case-study" element={<CaseStudyBuilder />} />
-            <Route path="about-us" element={<AboutUsBuilder />} />
+            <Route path="blog" element={<CollectionBuilds />} />
+            <Route path="case-study" element={<CollectionBuilds />} />
+            <Route path="about-us" element={<SingleCollectionBuilds />} />
           </Route>
           <Route
             path="/api-integration"

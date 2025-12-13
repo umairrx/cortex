@@ -22,6 +22,7 @@ interface FieldCardProps {
   selectedTypes: Record<string, string>;
   handleTypeSelect: (fieldName: string, type: string) => void;
   getIcon: (name: string) => ReactNode;
+  onAdd: (fieldName: string, type: string) => void;
 }
 
 const FieldCard = ({
@@ -29,6 +30,7 @@ const FieldCard = ({
   selectedTypes,
   handleTypeSelect,
   getIcon,
+  onAdd,
 }: FieldCardProps) => {
   return (
     <div>
@@ -84,7 +86,17 @@ const FieldCard = ({
                 </div>
                 <DialogFooter>
                   <DialogClose asChild>
-                    <Button>Add</Button>
+                    <Button
+                      onClick={() =>
+                        onAdd(
+                          fieldGroup.name,
+                          selectedTypes[fieldGroup.name] ||
+                            fieldGroup.types[0].type
+                        )
+                      }
+                    >
+                      Add
+                    </Button>
                   </DialogClose>
                 </DialogFooter>
               </DialogContent>
@@ -92,9 +104,10 @@ const FieldCard = ({
           ) : (
             <div
               className="p-3 border rounded-lg hover:bg-accent cursor-pointer transition flex items-center justify-between"
-              onClick={() =>
-                handleTypeSelect(fieldGroup.name, fieldGroup.types[0].type)
-              }
+              onClick={() => {
+                handleTypeSelect(fieldGroup.name, fieldGroup.types[0].type);
+                onAdd(fieldGroup.name, fieldGroup.types[0].type);
+              }}
             >
               <div className="flex items-center space-x-3">
                 {getIcon(fieldGroup.name)}

@@ -74,7 +74,7 @@ const SortableItem = ({
 						e.stopPropagation();
 						removeSelectedField(field_name);
 					}}
-					className="text-destructive hover:text-destructive hover:bg-destructive/10"
+					className="bg-destructive dark:text-foreground text-background"
 				>
 					Remove
 				</Button>

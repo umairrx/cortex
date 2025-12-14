@@ -1,10 +1,11 @@
 import { Upload, X } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import MarkdownEditor from "@/components/MarkdownEditor";
+import { MediaLibraryModal } from "../MediaLibraryModal";
 import { getFieldType } from "@/types/fields";
 
 interface FieldRendererProps {
@@ -53,6 +54,7 @@ export const FieldRenderer = ({
 						onChange={(e) => onChange(e.target.value)}
 						placeholder={`Enter ${field.label.toLowerCase()}`}
 						maxLength={fieldType.maxLength}
+						className="bg-background border-input"
 					/>
 				);
 
@@ -74,6 +76,7 @@ export const FieldRenderer = ({
 						type="date"
 						value={String(value || "")}
 						onChange={(e) => onChange(e.target.value)}
+						className="bg-background border-input"
 					/>
 				);
 
@@ -224,55 +227,73 @@ const ImageUpload = ({
 	onChange: (value: string) => void;
 }) => {
 	const [preview, setPreview] = useState(value);
+	const [modalOpen, setModalOpen] = useState(false);
 
-	const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-		const file = e.target.files?.[0];
-		if (file) {
-			const reader = new FileReader();
-			reader.onload = () => {
-				const result = reader.result as string;
-				setPreview(result);
-				onChange(result);
-			};
-			reader.readAsDataURL(file);
+	// Sync external value changes
+	useEffect(() => {
+		setPreview(value);
+	}, [value]);
+
+	const handleSelect = (urls: string[]) => {
+		if (urls.length > 0) {
+			const url = urls[0];
+			setPreview(url);
+			onChange(url);
 		}
 	};
 
 	return (
-		<div className="space-y-2">
-			<input
-				type="file"
-				accept="image/*"
-				onChange={handleFileChange}
-				className="hidden"
-				id="image-upload"
+		<div className="space-y-3">
+			<MediaLibraryModal
+				open={modalOpen}
+				onOpenChange={setModalOpen}
+				onSelect={handleSelect}
+				multiple={false}
 			/>
-			<label htmlFor="image-upload">
-				<Button variant="outline" className="cursor-pointer" asChild>
-					<span>
-						<Upload className="h-4 w-4 mr-2" />
-						{preview ? "Change Image" : "Upload Image"}
-					</span>
-				</Button>
-			</label>
-			{preview && (
-				<div className="relative">
+
+			{!preview ? (
+				<div
+					onClick={() => setModalOpen(true)}
+					className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-neutral-300 rounded-lg cursor-pointer bg-muted/30 hover:bg-muted/60 transition-colors"
+				>
+					<div className="flex flex-col items-center justify-center pt-5 pb-6">
+						<Upload className="w-8 h-8 mb-2 text-muted-foreground" />
+						<p className="text-sm text-muted-foreground">
+							Click to select or upload image
+						</p>
+					</div>
+				</div>
+			) : (
+				<div className="relative group rounded-lg overflow-hidden border bg-background w-fit">
 					<img
 						src={preview}
 						alt="Preview"
-						className="max-w-full h-32 object-cover rounded"
+						className="max-w-full h-48 object-contain"
 					/>
-					<Button
-						variant="destructive"
-						size="sm"
-						className="absolute top-2 right-2"
-						onClick={() => {
-							setPreview("");
-							onChange("");
-						}}
-					>
-						<X className="h-4 w-4" />
-					</Button>
+					<div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+						<Button
+							variant="secondary"
+							size="icon"
+							className="h-8 w-8 rounded-full"
+							onClick={() => setModalOpen(true)}
+							title="Change Image"
+						>
+							<Upload className="h-4 w-4" />
+						</Button>
+						<Button
+							variant="destructive"
+							size="icon"
+							className="h-8 w-8 rounded-full"
+							onClick={(e) => {
+								e.stopPropagation();
+								setPreview("");
+								onChange("");
+							}}
+							title="Remove Image"
+						>
+							<X className="h-4 w-4" />
+						</Button>
+					</div>
 				</div>
 			)}
 		</div>
@@ -287,66 +308,67 @@ const MultiImageUpload = ({
 	onChange: (value: string[]) => void;
 }) => {
 	const [images, setImages] = useState<string[]>(value || []);
+	const [modalOpen, setModalOpen] = useState(false);
 
-	const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-		const files = Array.from(e.target.files || []);
-		const newImages: string[] = [];
+	useEffect(() => {
+		setImages(value || []);
+	}, [value]);
 
-		files.forEach((file) => {
-			const reader = new FileReader();
-			reader.onload = () => {
-				newImages.push(reader.result as string);
-				if (newImages.length === files.length) {
-					const updated = [...images, ...newImages];
-					setImages(updated);
-					onChange(updated);
-				}
-			};
-			reader.readAsDataURL(file);
-		});
+	const handleSelect = (urls: string[]) => {
+		const newImages = [...images, ...urls];
+		setImages(newImages);
+		onChange(newImages);
 	};
 
 	const removeImage = (index: number) => {
-		const updated = images.filter((_, i) => i !== index);
-		setImages(updated);
-		onChange(updated);
+		const newImages = images.filter((_, i) => i !== index);
+		setImages(newImages);
+		onChange(newImages);
 	};
 
 	return (
-		<div className="space-y-2">
-			<input
-				type="file"
-				accept="image/*"
-				multiple
-				onChange={handleFileChange}
-				className="hidden"
-				id="multi-image-upload"
+		<div className="space-y-4">
+			<MediaLibraryModal
+				open={modalOpen}
+				onOpenChange={setModalOpen}
+				onSelect={handleSelect}
+				multiple={true}
 			/>
-			<label htmlFor="multi-image-upload">
-				<Button variant="outline" className="cursor-pointer" asChild>
-					<span>
-						<Upload className="h-4 w-4 mr-2" />
-						Upload Images
-					</span>
-				</Button>
-			</label>
+
+			<div
+				onClick={() => setModalOpen(true)}
+				className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-neutral-300 rounded-lg cursor-pointer bg-muted/30 hover:bg-muted/60 transition-colors"
+			>
+				<div className="flex flex-col items-center justify-center pt-5 pb-6">
+					<Upload className="w-8 h-8 mb-2 text-muted-foreground" />
+					<p className="text-sm text-muted-foreground">
+						Click to select multiple images
+					</p>
+				</div>
+			</div>
+
 			{images.length > 0 && (
-				<div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+				<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
 					{images.map((image, index) => (
-						<div key={image} className="relative">
+						<div
+							key={`${image}-${index}`}
+							className="relative group aspect-square rounded-lg overflow-hidden border bg-background"
+						>
 							<img
 								src={image}
-								alt="Uploaded content"
-								className="w-full h-24 object-cover rounded"
+								alt={`Uploaded ${index + 1}`}
+								className="w-full h-full object-cover"
 							/>
-							<Button
-								variant="destructive"
-								size="sm"
-								className="absolute top-1 right-1"
-								onClick={() => removeImage(index)}
-							>
-								<X className="h-3 w-3" />
-							</Button>
+							<div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+								<Button
+									variant="destructive"
+									size="icon"
+									className="h-8 w-8 rounded-full"
+									onClick={() => removeImage(index)}
+								>
+									<X className="h-4 w-4" />
+								</Button>
+							</div>
 						</div>
 					))}
 				</div>
@@ -372,5 +394,3 @@ const RichTextEditor = ({
 		/>
 	);
 };
-
-

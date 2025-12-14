@@ -185,10 +185,12 @@ export default function ContentManager() {
 					<div className="px-2 mb-6 sticky top-0 bg-sidebar pt-4 pb-2 z-10">
 						<Link
 							to="/collection-types-builder"
-							className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-primary text-background hover:bg-primary/90 transition-colors shadow focus:outline-none focus:ring-2 focus:ring-primary/50"
+							className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-primary hover:bg-primary/90 transition-colors shadow focus:outline-none focus:ring-2 focus:ring-primary/50 "
 						>
-							<Plus className="size-5" />
-							<span className="font-medium text-sm">New Collection</span>
+							<Plus className="size-5 text-background" />
+							<span className="font-medium text-sm text-background">
+								New Collection
+							</span>
 						</Link>
 					</div>
 

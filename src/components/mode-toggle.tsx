@@ -17,7 +17,31 @@ import { useTheme } from "./use-theme.ts";
  * @returns A button with dropdown menu for theme selection
  */
 export function ModeToggle() {
-	const { setTheme } = useTheme();
+	const { theme, setTheme } = useTheme();
+
+	const getCurrentBase = (themeName: string | undefined) => {
+		if (!themeName) return "default";
+		if (themeName === "light" || themeName === "dark") return "default";
+		if (themeName === "system") return "default";
+		return themeName.endsWith("-dark")
+			? themeName.replace("-dark", "")
+			: themeName;
+	};
+
+	const handleThemeChange = (mode: "light" | "dark" | "system") => {
+		if (mode === "system") {
+			setTheme("system");
+			return;
+		}
+
+		const base = getCurrentBase(theme);
+
+		if (base === "default") {
+			setTheme(mode);
+		} else {
+			setTheme(mode === "dark" ? `${base}-dark` : base);
+		}
+	};
 
 	return (
 		<DropdownMenu>
@@ -29,13 +53,13 @@ export function ModeToggle() {
 				</Button>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align="end">
-				<DropdownMenuItem onClick={() => setTheme("light")}>
+				<DropdownMenuItem onClick={() => handleThemeChange("light")}>
 					Light
 				</DropdownMenuItem>
-				<DropdownMenuItem onClick={() => setTheme("dark")}>
+				<DropdownMenuItem onClick={() => handleThemeChange("dark")}>
 					Dark
 				</DropdownMenuItem>
-				<DropdownMenuItem onClick={() => setTheme("system")}>
+				<DropdownMenuItem onClick={() => handleThemeChange("system")}>
 					System
 				</DropdownMenuItem>
 			</DropdownMenuContent>

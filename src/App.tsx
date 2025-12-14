@@ -40,7 +40,6 @@ function AppContent() {
 	const loadingBarRef = useRef<LoadingBarRef | null>(null);
 	const { theme } = useTheme();
 
-	// intent: restart the progress bar on route changes
 	useEffect(() => {
 		loadingBarRef.current?.continuousStart?.();
 

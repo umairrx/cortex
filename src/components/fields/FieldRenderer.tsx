@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import MarkdownEditor from "@/components/MarkdownEditor";
 import { getFieldType } from "@/types/fields";
 
 interface FieldRendererProps {
@@ -104,7 +105,7 @@ export const FieldRenderer = ({
 				return (
 					<MarkdownEditor
 						value={value as string}
-						onChange={onChange as (value: string) => void}
+						onChange={(val) => onChange(val || "")}
 					/>
 				);
 
@@ -372,20 +373,4 @@ const RichTextEditor = ({
 	);
 };
 
-const MarkdownEditor = ({
-	value,
-	onChange,
-}: {
-	value: string;
-	onChange: (value: string) => void;
-}) => {
-	return (
-		<Textarea
-			value={value || ""}
-			onChange={(e) => onChange(e.target.value)}
-			placeholder="Enter markdown content..."
-			rows={6}
-			className="font-mono max-h-[40vh] overflow-auto resize-y"
-		/>
-	);
-};
+

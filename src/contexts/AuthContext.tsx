@@ -1,7 +1,10 @@
 import type { ReactNode } from "react";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
-import { api, setAccessToken } from "../lib/api";
+import { api } from "../lib/api";
 
+/**
+ * Shape of the authentication context value.
+ */
 interface AuthContextType {
 	isAuthenticated: boolean;
 	login: (
@@ -19,6 +22,13 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+/**
+ * Hook to access the authentication context.
+ * Must be used within an AuthProvider.
+ *
+ * @returns The authentication context value
+ * @throws Error if used outside of AuthProvider
+ */
 export const useAuth = () => {
 	const context = useContext(AuthContext);
 	if (!context) {
@@ -53,25 +63,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 		 */
 		const initAuth = async () => {
 			try {
+				const profileResponse = await api.get("/profile");
+				setUser(profileResponse.data.user);
+				setIsAuthenticated(true);
+			} catch (_error) {
 				try {
-					const response = await api.post("/refresh");
-					const { accessToken } = response.data;
-					setAccessToken(accessToken);
+					await api.post("/refresh");
 
-					const profileResponse = await api.get("/profile");
-					setUser(profileResponse.data.user);
+					const retryProfile = await api.get("/profile");
+					setUser(retryProfile.data.user);
 					setIsAuthenticated(true);
-				} catch (error) {
-					console.error("Profile fetch error:", error);
-					setAccessToken(null);
+				} catch (_refreshErr) {
 					setUser(null);
 					setIsAuthenticated(false);
 				}
-			} catch (error) {
-				console.error("Auth init error:", error);
-				setAccessToken(null);
-				setUser(null);
-				setIsAuthenticated(false);
 			} finally {
 				setLoading(false);
 			}
@@ -82,11 +87,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 	/**
 	 * Logs in a user with email and password.
-	 * Stores tokens in memory (and cookie via server) and updates state.
-	 *
-	 * @param email - The user's email address.
-	 * @param password - The user's password.
-	 * @returns An object with success status and optional error message.
 	 */
 	const login = async (
 		email: string,
@@ -97,14 +97,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 				email,
 				password,
 			});
-			const { accessToken } = response.data;
-			setAccessToken(accessToken);
 
-			try {
+			if (response.data.user) {
+				setUser(response.data.user);
+			} else {
 				const profileResponse = await api.get("/profile");
 				setUser(profileResponse.data.user);
-			} catch {
-				setUser({ email });
 			}
 
 			setIsAuthenticated(true);
@@ -131,11 +129,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 	/**
 	 * Signs up a new user with email and password.
-	 * Stores tokens in memory and updates state.
-	 *
-	 * @param email - The user's email address.
-	 * @param password - The user's password.
-	 * @returns An object with success status and optional error message.
 	 */
 	const signup = async (
 		email: string,
@@ -146,14 +139,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 				email,
 				password,
 			});
-			const { accessToken } = response.data;
-			setAccessToken(accessToken);
 
-			try {
+			if (response.data.user) {
+				setUser(response.data.user);
+			} else {
 				const profileResponse = await api.get("/profile");
 				setUser(profileResponse.data.user);
-			} catch {
-				setUser({ email });
 			}
 
 			setIsAuthenticated(true);
@@ -180,9 +171,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 	/**
 	 * Logs out the current user.
-	 * Sends a logout request to the server and clears state.
-	 *
-	 * @returns A promise that resolves when logout is complete.
 	 */
 	const logout = async () => {
 		try {
@@ -190,7 +178,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 		} catch (error) {
 			console.error("Logout error:", error);
 		} finally {
-			setAccessToken(null);
 			setUser(null);
 			setIsAuthenticated(false);
 		}

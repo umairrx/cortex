@@ -74,11 +74,16 @@ export const useUpdateItemMutation = () => {
 		mutationFn: async ({
 			id,
 			data,
+			collectionId,
 		}: {
 			id: string;
 			data: Record<string, unknown>;
+			collectionId?: string;
 		}): Promise<Item> => {
-			const response = await api.put(`/items/${id}`, { data });
+			const url = collectionId
+				? `/collections/${collectionId}/items/${id}`
+				: `/items/${id}`;
+			const response = await api.put(url, { data });
 			return response.data;
 		},
 		onSuccess: (newItem) => {
@@ -97,8 +102,17 @@ export const useDeleteItemMutation = () => {
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: async (id: string): Promise<void> => {
-			await api.delete(`/items/${id}`);
+		mutationFn: async ({
+			id,
+			collectionId,
+		}: {
+			id: string;
+			collectionId?: string;
+		}): Promise<void> => {
+			const url = collectionId
+				? `/collections/${collectionId}/items/${id}`
+				: `/items/${id}`;
+			await api.delete(url);
 		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["items"] });

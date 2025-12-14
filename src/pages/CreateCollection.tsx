@@ -21,6 +21,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCollections } from "@/contexts/CollectionsContext";
 import { useFieldManagement } from "@/hooks/useFieldManagement";
+import { useIntegrations } from "@/hooks/useIntegrations";
 import CollectionTypesHeader from "@/pages/CollectionTypesHeader";
 import { FIELD_TYPES } from "@/types/fields";
 import type { CollectionField } from "@/types/types";
@@ -41,6 +42,7 @@ export interface FieldType {
  */
 const CreateCollection = () => {
 	const { addCollection } = useCollections();
+	const { integrations } = useIntegrations();
 	const navigate = useNavigate();
 
 	const [search, setSearch] = useState("");
@@ -95,6 +97,8 @@ const CreateCollection = () => {
 			label: getMainFieldName(selectedTypes[field_name]),
 		}));
 
+		const activeIntegration = integrations.length > 0 ? integrations[0] : null;
+
 		const collectionData = {
 			id: collectionNameValidation.singular,
 			name: collectionNameValidation.displayName,
@@ -102,6 +106,8 @@ const CreateCollection = () => {
 			plural: customPlural || collectionNameValidation.plural,
 			type: collectionType,
 			fields,
+			integrationId: activeIntegration?._id,
+			externalTableName: collectionNameValidation.singular,
 		};
 
 		try {

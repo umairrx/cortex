@@ -1,20 +1,28 @@
-import { ArrowLeft, Loader2, Save } from "lucide-react";
+import { ArrowLeft, Database, HardDrive, Loader2, Save } from "lucide-react";
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { FieldRenderer } from "@/components/fields/FieldRenderer";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useCollections } from "@/contexts/CollectionsContext";
 import { useCreateItemMutation } from "@/hooks/tanstack/useItems";
+import { useIntegrations } from "@/hooks/useIntegrations";
 import { getFieldType } from "@/types/fields";
 
 export default function ContentCreate() {
 	const { collectionId } = useParams<{ collectionId: string }>();
 	const { collections } = useCollections();
+	const { integrations } = useIntegrations();
 	const navigate = useNavigate();
 
 	const collection = collections.find((c) => c.id === collectionId);
+
+	const activeIntegration = collection?.integrationId
+		? integrations.find((i) => i._id === collection.integrationId)
+		: null;
+
 	const createItemMutation = useCreateItemMutation(collectionId || "");
 
 	const [formData, setFormData] = useState<
@@ -29,12 +37,14 @@ export default function ContentCreate() {
 				const value = formData[field.field_name];
 				const fieldDef = getFieldType(field.type);
 
-				if (
-					value === undefined ||
-					value === null ||
-					(typeof value === "string" && value.trim() === "")
-				) {
-					newErrors[field.field_name] = `${field.label} is required`;
+				if (field.required) {
+					if (
+						value === undefined ||
+						value === null ||
+						(typeof value === "string" && value.trim() === "")
+					) {
+						newErrors[field.field_name] = `${field.label} is required`;
+					}
 				}
 
 				if (fieldDef?.validation && value) {
@@ -66,7 +76,9 @@ export default function ContentCreate() {
 
 		try {
 			await createItemMutation.mutateAsync(formData);
-			toast.success("Content created successfully");
+			toast.success(
+				`Content created in ${activeIntegration ? activeIntegration.name : "Internal DB"}`,
+			);
 			navigate(`/content-manager?collectionId=${collectionId}`);
 		} catch (error) {
 			console.error("Failed to save content", error);
@@ -101,9 +113,28 @@ export default function ContentCreate() {
 							<ArrowLeft className="h-4 w-4" />
 						</Button>
 						<div className="flex flex-col gap-1">
-							<h1 className="text-lg font-semibold leading-none tracking-tight">
-								Create {collection.singular}
-							</h1>
+							<div className="flex items-center gap-2">
+								<h1 className="text-lg font-semibold leading-none tracking-tight">
+									Create {collection.singular}
+								</h1>
+								{activeIntegration ? (
+									<Badge
+										variant="outline"
+										className="text-xs gap-1 border-blue-500/30 bg-blue-50 text-blue-700"
+									>
+										<Database className="h-3 w-3" />
+										{activeIntegration.name}
+									</Badge>
+								) : (
+									<Badge
+										variant="outline"
+										className="text-xs gap-1 text-muted-foreground"
+									>
+										<HardDrive className="h-3 w-3" />
+										Internal DB
+									</Badge>
+								)}
+							</div>
 							<p className="text-sm text-muted-foreground">
 								Add a new entry to {collection.name}
 							</p>

@@ -61,7 +61,6 @@ type FieldBeingAdded = {
 } | null;
 
 interface CollectionDialogsProps {
-	// Create/Edit Collection Dialog
 	showCreateCollectionDialog: boolean;
 	setShowCreateCollectionDialog: (show: boolean) => void;
 	isCollectionCreated: boolean;
@@ -79,12 +78,10 @@ interface CollectionDialogsProps {
 	setSelectedFields: (fields: string[]) => void;
 	setSelectedTypes: (types: Record<string, string>) => void;
 
-	// Delete Collection Dialog
 	showDeleteConfirmDialog: boolean;
 	setShowDeleteConfirmDialog: (show: boolean) => void;
 	setIsCollectionCreated: (created: boolean) => void;
 
-	// Field Name Dialog
 	showFieldNameDialog: boolean;
 	setShowFieldNameDialog: (show: boolean) => void;
 	fieldBeingAdded: FieldBeingAdded;

@@ -9,7 +9,7 @@ import {
 	Trash2,
 } from "lucide-react";
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { EmptyState } from "@/components/EmptyState";
@@ -26,11 +26,15 @@ import {
 	useItemsQuery,
 	useUpdateItemMutation,
 } from "@/hooks/tanstack/useItems";
+import { useIntegrations } from "@/hooks/useIntegrations";
 import DashboardLayout from "@/layouts/DashboardLayout";
 import { getFieldType } from "@/types/fields";
 import type { Collection } from "@/types/types";
 
 export default function ContentManager() {
+	const { integrations } = useIntegrations();
+	const navigate = useNavigate();
+
 	const { collections } = useCollections();
 	const [selectedCollection, setSelectedCollection] =
 		useState<Collection | null>(null);
@@ -74,12 +78,14 @@ export default function ContentManager() {
 				const value = formData[field.field_name];
 				const fieldDef = getFieldType(field.type);
 
-				if (
-					value === undefined ||
-					value === null ||
-					(typeof value === "string" && value.trim() === "")
-				) {
-					newErrors[field.field_name] = `${field.label} is required`;
+				if (field.required) {
+					if (
+						value === undefined ||
+						value === null ||
+						(typeof value === "string" && value.trim() === "")
+					) {
+						newErrors[field.field_name] = `${field.label} is required`;
+					}
 				}
 
 				if (fieldDef?.validation && value) {
@@ -107,13 +113,18 @@ export default function ContentManager() {
 	};
 
 	const handleSaveContent = async () => {
-		if (!selectedCollection || !validateForm()) return;
+		if (!selectedCollection) return;
+		if (!validateForm()) {
+			toast.error("Please fill in all required fields");
+			return;
+		}
 
 		try {
 			if (editingItem) {
 				await updateItemMutation.mutateAsync({
 					id: editingItem._id,
 					data: formData,
+					collectionId: selectedCollection.id,
 				});
 				toast.success("Content updated successfully");
 			} else {
@@ -131,14 +142,40 @@ export default function ContentManager() {
 
 	const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
+	if (!integrations || integrations.length === 0) {
+		return (
+			<DashboardLayout>
+				<PageHeader
+					title="Content Manager"
+					description="Manage your content."
+				/>
+				<div className="flex h-[calc(100vh-200px)] items-center justify-center p-6">
+					<EmptyState
+						icon={Database}
+						title="No Database Connected"
+						description="You must connect an external database (MongoDB) to manage content."
+						className="py-12"
+						action={{
+							label: "Connect Database",
+							onClick: () => navigate("/api-integration"),
+						}}
+					/>
+				</div>
+			</DashboardLayout>
+		);
+	}
+
 	const handleDeleteContent = (itemId: string) => {
 		setItemToDelete(itemId);
 	};
 
 	const confirmDelete = async () => {
-		if (!itemToDelete) return;
+		if (!itemToDelete || !selectedCollection) return;
 		try {
-			await deleteItemMutation.mutateAsync(itemToDelete);
+			await deleteItemMutation.mutateAsync({
+				id: itemToDelete,
+				collectionId: selectedCollection.id,
+			});
 			toast.success("Item deleted");
 		} catch (error) {
 			console.error("Failed to delete item", error);
@@ -206,7 +243,7 @@ export default function ContentManager() {
 							.filter((section) => section.items.length > 0)
 							.map((section) => (
 								<div key={section.title} className="mb-8">
-									<div className="flex items-center gap-2 border-b pb-3 mb-1 px-5">
+									<div className="flex items-center gap-2 border-b pb-3 mb-1 px-5 ">
 										{section.icon}
 										<h2 className="text-sm font-semibold">{section.title}</h2>
 									</div>
@@ -221,7 +258,7 @@ export default function ContentManager() {
 															setIsEditing(false);
 														}}
 														className={
-															"w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-accent transition-colors text-left" +
+															"w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-accent transition-colors text-left cursor-pointer" +
 															(selectedCollection?.id === item.id
 																? " bg-accent"
 																: "")

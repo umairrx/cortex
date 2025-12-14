@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useActionState } from "react";
+import { startTransition, useActionState } from "react";
 import { useForm } from "react-hook-form";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -88,7 +88,9 @@ export default function SignIn() {
 	 * @param values - The validated form values.
 	 */
 	async function onSubmit(values: z.infer<typeof formSchema>) {
-		dispatch({ email: values.email, password: values.password });
+		startTransition(() => {
+			dispatch({ email: values.email, password: values.password });
+		});
 	}
 
 	return (

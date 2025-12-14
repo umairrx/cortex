@@ -27,24 +27,19 @@ export function ThemeProvider({
 	useEffect(() => {
 		const root = window.document.documentElement;
 
-		// We use the data-theme attribute in CSS selectors (index.css)
-		// so ensure we set that attribute instead of classnames.
-		// If theme === 'system', set data-theme to 'dark' or 'light' based on system preference.
 		if (theme === "system") {
 			const isSystemDark = window.matchMedia(
 				"(prefers-color-scheme: dark)",
 			).matches;
 			const systemTheme = isSystemDark ? "dark" : "light";
 			root.setAttribute("data-theme", systemTheme);
-			// apply class for tailwind dark variants
+
 			root.classList.remove("light", "dark");
 			root.classList.add(systemTheme);
 			setResolvedTheme(systemTheme);
 			return;
 		}
 
-		// For named themes like 'amber' or 'amber-dark' or 'dark', set the data-theme
-		// attribute to the theme string directly and set root class to 'dark'/'light'
 		root.setAttribute("data-theme", theme);
 		root.classList.remove("light", "dark");
 		if (theme.endsWith("-dark") || theme === "dark") {
@@ -52,7 +47,7 @@ export function ThemeProvider({
 		} else {
 			root.classList.add("light");
 		}
-		// resolvedTheme: if theme is '...-dark' or 'dark', resolvedTheme === 'dark'
+
 		if (theme.endsWith("-dark") || theme === "dark") {
 			setResolvedTheme("dark");
 		} else {

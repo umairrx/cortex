@@ -54,14 +54,13 @@ export const useCreateCollectionMutation = () => {
 			return response.data;
 		},
 		onSuccess: (data) => {
-			// Immediately add the new collection to the cache
 			queryClient.setQueryData(
 				collectionKeys.all,
 				(oldData: Collection[] | undefined) => {
 					return oldData ? [...oldData, data] : [data];
 				},
 			);
-			// Also set the individual collection cache
+
 			queryClient.setQueryData(collectionKeys.detail(data.id), data);
 		},
 	});
@@ -86,9 +85,8 @@ export const useUpdateCollectionMutation = () => {
 			return response.data;
 		},
 		onSuccess: (data) => {
-			// Update the individual collection cache
 			queryClient.setQueryData(collectionKeys.detail(data.id), data);
-			// Update the collection in the list cache
+
 			queryClient.setQueryData(
 				collectionKeys.all,
 				(oldData: Collection[] | undefined) => {
@@ -118,14 +116,13 @@ export const useDeleteCollectionMutation = () => {
 			await api.delete(`/collections/${id}`);
 		},
 		onSuccess: (_, id) => {
-			// Remove from the collections list cache
 			queryClient.setQueryData(
 				collectionKeys.all,
 				(oldData: Collection[] | undefined) => {
 					return oldData ? oldData.filter((c) => c.id !== id) : [];
 				},
 			);
-			// Remove the individual collection cache
+
 			queryClient.removeQueries({ queryKey: collectionKeys.detail(id) });
 		},
 	});

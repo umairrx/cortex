@@ -18,10 +18,8 @@ const CollectionWrapper = () => {
 	const { collections } = useCollections();
 	const { data: collection, isLoading } = useCollectionQuery(id || "");
 
-	// First try to find in the collections list
 	let foundCollection = collections.find((c) => c.id === id);
 
-	// If not found in list, use the individual query result
 	if (!foundCollection && collection) {
 		foundCollection = collection;
 	}

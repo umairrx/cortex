@@ -32,7 +32,6 @@ export const FieldManagement = ({
 	addSelectedFieldRequest,
 }: FieldManagementProps) => {
 	const getIcon = (iconName: string) => {
-		// This logic should be moved to a utility or kept in the main component
 		switch (iconName) {
 			default:
 				return null;

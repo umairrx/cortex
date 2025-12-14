@@ -2,6 +2,7 @@ interface CollectionField {
 	field_name: string;
 	type: string;
 	label: string;
+	required?: boolean;
 }
 
 interface Collection {
@@ -13,6 +14,8 @@ interface Collection {
 	fields: CollectionField[];
 	createdAt: string;
 	updatedAt: string;
+	integrationId?: string;
+	externalTableName?: string;
 }
 
 export type { Collection, CollectionField };

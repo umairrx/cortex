@@ -1,5 +1,5 @@
 import { Check, Image as ImageIcon, Upload } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -43,7 +43,7 @@ export function MediaLibraryModal({
 
 	const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
-	const fetchFiles = async () => {
+	const fetchFiles = useCallback(async () => {
 		try {
 			setLoading(true);
 			const token = localStorage.getItem("accessToken");
@@ -61,14 +61,14 @@ export function MediaLibraryModal({
 		} finally {
 			setLoading(false);
 		}
-	};
+	}, []);
 
 	useEffect(() => {
 		if (open) {
 			fetchFiles();
 			setSelectedFiles([]);
 		}
-	}, [open]);
+	}, [open, fetchFiles]);
 
 	const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
 		const fileList = e.target.files;
@@ -77,17 +77,14 @@ export function MediaLibraryModal({
 		setUploading(true);
 		try {
 			const formData = new FormData();
-			// For simplicity in this modal, we handle one file upload at a time via the input,
-			// or we could support multiple if the backend supports it in one go or we loop.
-			// The current single upload endpoint is /api/upload (key: 'file')
-			// The multiple upload endpoint is /api/upload/multiple (key: 'files')
 
-			// Let's support multiple upload for convenience
 			const isMultipleUpload = fileList.length > 1;
 			const token = localStorage.getItem("accessToken");
 
 			if (isMultipleUpload) {
-				Array.from(fileList).forEach((file) => formData.append("files", file));
+				for (const file of Array.from(fileList)) {
+					formData.append("files", file);
+				}
 				const response = await fetch(`${API_URL}/api/upload/multiple`, {
 					method: "POST",
 					headers: { Authorization: token ? `Bearer ${token}` : "" },
@@ -118,7 +115,7 @@ export function MediaLibraryModal({
 			toast.error("Failed to upload file");
 		} finally {
 			setUploading(false);
-			// Reset input
+
 			e.target.value = "";
 		}
 	};
@@ -192,8 +189,9 @@ export function MediaLibraryModal({
 											const isSelected = selectedFiles.includes(fullUrl);
 
 											return (
-												<div
+												<button
 													key={file._id}
+													type="button"
 													className={cn(
 														"relative group aspect-square rounded-lg overflow-hidden border cursor-pointer transition-all",
 														isSelected
@@ -228,7 +226,7 @@ export function MediaLibraryModal({
 															{file.originalName}
 														</p>
 													</div>
-												</div>
+												</button>
 											);
 										})}
 									</div>

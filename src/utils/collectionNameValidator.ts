@@ -21,7 +21,6 @@ export interface CollectionNameValidationResult {
  * Maps singular nouns to their plural forms
  */
 const PLURAL_RULES: Record<string, string> = {
-	// Irregular plurals
 	person: "people",
 	man: "men",
 	woman: "women",
@@ -31,7 +30,6 @@ const PLURAL_RULES: Record<string, string> = {
 	goose: "geese",
 	mouse: "mice",
 
-	// Common irregular endings
 	ox: "oxen",
 	sheep: "sheep",
 	deer: "deer",
@@ -50,14 +48,11 @@ const PLURAL_RULES: Record<string, string> = {
 export const pluralize = (singular: string): string => {
 	const lower = singular.toLowerCase();
 
-	// Check irregular plurals first
 	if (PLURAL_RULES[lower]) {
 		return PLURAL_RULES[lower];
 	}
 
-	// Standard pluralization rules
 	if (lower.endsWith("y")) {
-		// category -> categories
 		return `${lower.slice(0, -1)}ies`;
 	}
 
@@ -69,12 +64,10 @@ export const pluralize = (singular: string): string => {
 		lower.endsWith("ch") ||
 		lower.endsWith("sh")
 	) {
-		// class -> classes, box -> boxes
 		return `${lower}es`;
 	}
 
 	if (lower.endsWith("o")) {
-		// hero -> heroes, photo -> photos
 		const voiceless = ["photo", "piano", "halo"];
 		if (voiceless.some((word) => lower.endsWith(word))) {
 			return `${lower}s`;
@@ -83,16 +76,13 @@ export const pluralize = (singular: string): string => {
 	}
 
 	if (lower.endsWith("f")) {
-		// leaf -> leaves, belief -> beliefs
 		return `${lower.slice(0, -1)}ves`;
 	}
 
 	if (lower.endsWith("fe")) {
-		// life -> lives, wife -> wives
 		return `${lower.slice(0, -2)}ves`;
 	}
 
-	// Default: just add 's'
 	return `${lower}s`;
 };
 
@@ -111,19 +101,17 @@ export const pluralize = (singular: string): string => {
  * @returns The normalized name
  */
 export const normalizeCollectionName = (input: string): string => {
-	return (
-		input
-			.toLowerCase()
-			.trim()
-			// Replace spaces with hyphens
-			.replace(/\s+/g, "-")
-			// Remove invalid characters (keep only a-z, 0-9, hyphens)
-			.replace(/[^a-z0-9-]/g, "")
-			// Remove consecutive hyphens
-			.replace(/-+/g, "-")
-			// Remove leading/trailing hyphens
-			.replace(/^-+|-+$/g, "")
-	);
+	return input
+		.toLowerCase()
+		.trim()
+
+		.replace(/\s+/g, "-")
+
+		.replace(/[^a-z0-9-]/g, "")
+
+		.replace(/-+/g, "-")
+
+		.replace(/^-+|-+$/g, "");
 };
 
 /**
@@ -172,12 +160,10 @@ export const validateCollectionName = (
 		errors.push("Collection name cannot contain consecutive hyphens");
 	}
 
-	// Check for file extensions
 	if (/\.(com|org|net|json|xml|txt|sql|api|db|api|rest)$/i.test(normalized)) {
 		errors.push("Collection name cannot contain file extensions");
 	}
 
-	// Check for common action-based patterns (non-semantic)
 	const actionPatterns =
 		/^(get|post|put|delete|create|edit|update|delete|remove|add|fetch|list|show|view|manage|build|make|set|do|run|execute|process|handle|perform|action|method|call|send|receive|export|import|download|upload|submit|process|validate|generate)/i;
 	if (actionPatterns.test(normalized)) {
@@ -186,7 +172,6 @@ export const validateCollectionName = (
 		);
 	}
 
-	// Check for deep/hierarchical paths
 	if (normalized.includes("/") || normalized.includes("\\")) {
 		errors.push(
 			"Collection name cannot contain path separators or hierarchical structures",
@@ -220,7 +205,6 @@ export const validateAndNormalizeCollectionName = (
 	const singular = normalized;
 	const plural = validation.isValid ? pluralize(singular) : "";
 
-	// Create display name: convert hyphens back to spaces and capitalize
 	const displayName = singular
 		.split("-")
 		.map((word) => word.charAt(0).toUpperCase() + word.slice(1))

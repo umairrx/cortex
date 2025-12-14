@@ -3,82 +3,72 @@ import axios from "axios";
 const API_BASE_URL =
 	import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api";
 
-let accessToken: string | null = null;
-let isRefreshing = false;
-let failedQueue: {
-	resolve: (value: unknown) => void;
-	reject: (reason?: Error | unknown) => void;
-}[] = [];
+export const api = axios.create({
+	baseURL: API_BASE_URL,
+	withCredentials: true,
+});
 
-const processQueue = (error: Error | unknown, token: string | null = null) => {
+let isRefreshing = false;
+let failedQueue: Array<{
+	resolve: (value?: unknown) => void;
+	reject: (reason?: unknown) => void;
+}> = [];
+
+const processQueue = (error: unknown = null) => {
 	failedQueue.forEach((prom) => {
 		if (error) {
 			prom.reject(error);
 		} else {
-			prom.resolve(token);
+			prom.resolve();
 		}
 	});
 
 	failedQueue = [];
 };
 
-export const setAccessToken = (token: string | null) => {
-	accessToken = token;
-};
-
-export const getAccessToken = () => accessToken;
-
-export const api = axios.create({
-	baseURL: API_BASE_URL,
-	withCredentials: true,
-});
-
-api.interceptors.request.use((config) => {
-	if (accessToken) {
-		config.headers.Authorization = `Bearer ${accessToken}`;
-	}
-	return config;
-});
-
 api.interceptors.response.use(
 	(response) => response,
 	async (error) => {
 		const originalRequest = error.config;
+
+		if (originalRequest.url?.includes("/refresh")) {
+			console.error("[API] Refresh endpoint failed. User must login again.");
+			isRefreshing = false;
+			processQueue(error);
+
+			return Promise.reject(error);
+		}
 
 		if (error.response?.status === 401 && !originalRequest._retry) {
 			if (isRefreshing) {
 				return new Promise((resolve, reject) => {
 					failedQueue.push({ resolve, reject });
 				})
-					.then((token) => {
-						originalRequest.headers.Authorization = `Bearer ${token}`;
-						return api(originalRequest);
-					})
-					.catch((err) => {
-						return Promise.reject(err);
-					});
+					.then(() => api(originalRequest))
+					.catch((err) => Promise.reject(err));
 			}
 
+			console.warn(
+				"[API] 401 Unauthorized detected. Attempting Auto-Refresh...",
+			);
 			originalRequest._retry = true;
 			isRefreshing = true;
 
 			try {
-				const response = await api.post("/refresh");
-				const { accessToken: newAccessToken } = response.data;
+				await api.post("/refresh");
+				console.log(
+					"[API] Auto-Refresh successful. Retrying original request.",
+				);
+				isRefreshing = false;
+				processQueue();
 
-				setAccessToken(newAccessToken);
-				api.defaults.headers.common.Authorization = `Bearer ${newAccessToken}`;
-				originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-
-				processQueue(null, newAccessToken);
 				return api(originalRequest);
 			} catch (err) {
-				processQueue(err, null);
-				setAccessToken(null);
+				console.error("[API] Auto-Refresh failed. User must login again.", err);
+				isRefreshing = false;
+				processQueue(err);
 
 				return Promise.reject(err);
-			} finally {
-				isRefreshing = false;
 			}
 		}
 

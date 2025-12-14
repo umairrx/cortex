@@ -57,7 +57,12 @@ export const useFieldManagement = ({
 		}),
 	);
 
-	// Helper to update fields and trigger callback
+	/**
+	 * Updates the local state and triggers the change callback.
+	 *
+	 * @param newFields - The new list of field names in order
+	 * @param newTypes - The new map of field types
+	 */
 	const updateState = (
 		newFields: string[],
 		newTypes: Record<string, string>,
@@ -103,10 +108,6 @@ export const useFieldManagement = ({
 	const handleTypeSelect = (fieldName: string, type: string) => {
 		const newTypes = { ...selectedTypes, [fieldName]: type };
 		setSelectedTypes(newTypes);
-		// Note: fields array doesn't change here, but types do.
-		// If onFieldsChange expectation is strict about needing both, we pass both.
-		// However, usually reorder/add/remove is what we persist for structure.
-		// Types update might need persistence too.
 		onFieldsChange?.(selectedFields, newTypes);
 	};
 
@@ -121,9 +122,6 @@ export const useFieldManagement = ({
 			toast.error("Single types can only have one field.");
 			return;
 		}
-
-		// Just updating types temporarily, not triggering structural change callback yet?
-
 		setSelectedTypes((prev) => ({ ...prev, [fieldName]: type }));
 		setFieldBeingAdded({ fieldName, type, field_name: "" });
 		setFieldNameError("");
@@ -151,7 +149,6 @@ export const useFieldManagement = ({
 		const newTypes = { ...selectedTypes, [field_name]: type };
 		const newFields = [...selectedFields, field_name];
 
-		// Update local state and trigger callback
 		setFieldBeingAdded(null);
 		setShowFieldNameDialog(false);
 		updateState(newFields, newTypes);

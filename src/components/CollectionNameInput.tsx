@@ -39,9 +39,9 @@ export const CollectionNameInput = ({
 				onChange={(e) => {
 					const input = e.target.value;
 					setCollectionNameInput(input);
-					// Reset custom plural when collection name changes
+
 					setCustomPlural("");
-					// Real-time validation
+
 					if (input.trim()) {
 						const validation = validateAndNormalizeCollectionName(input);
 						setCollectionNameValidation(validation);

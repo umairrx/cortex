@@ -1,9 +1,8 @@
-import { Trash2, Copy, Image as ImageIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Copy, Image as ImageIcon, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { toast } from "sonner";
-import { useTheme } from "@/components/use-theme";
 
 interface FileItem {
 	_id: string;
@@ -20,11 +19,10 @@ import DashboardLayout from "@/layouts/DashboardLayout";
 const MediaLibrary = () => {
 	const [files, setFiles] = useState<FileItem[]>([]);
 	const [loading, setLoading] = useState(true);
-	const { theme } = useTheme();
 
 	const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
-	const fetchFiles = async () => {
+	const fetchFiles = useCallback(async () => {
 		try {
 			const token = localStorage.getItem("accessToken");
 			const response = await fetch(`${API_URL}/api/upload`, {
@@ -41,11 +39,11 @@ const MediaLibrary = () => {
 		} finally {
 			setLoading(false);
 		}
-	};
+	}, []);
 
 	useEffect(() => {
 		fetchFiles();
-	}, []);
+	}, [fetchFiles]);
 
 	const handleDelete = async (id: string) => {
 		if (!confirm("Are you sure you want to delete this file?")) return;

@@ -1,12 +1,12 @@
 import { Upload, X } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import MarkdownEditor from "@/components/MarkdownEditor";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import MarkdownEditor from "@/components/MarkdownEditor";
-import { MediaLibraryModal } from "../MediaLibraryModal";
 import { getFieldType } from "@/types/fields";
+import { MediaLibraryModal } from "../MediaLibraryModal";
 
 interface FieldRendererProps {
 	field: {
@@ -229,7 +229,6 @@ const ImageUpload = ({
 	const [preview, setPreview] = useState(value);
 	const [modalOpen, setModalOpen] = useState(false);
 
-	// Sync external value changes
 	useEffect(() => {
 		setPreview(value);
 	}, [value]);
@@ -252,7 +251,8 @@ const ImageUpload = ({
 			/>
 
 			{!preview ? (
-				<div
+				<button
+					type="button"
 					onClick={() => setModalOpen(true)}
 					className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-neutral-300 rounded-lg cursor-pointer bg-muted/30 hover:bg-muted/60 transition-colors"
 				>
@@ -262,7 +262,7 @@ const ImageUpload = ({
 							Click to select or upload image
 						</p>
 					</div>
-				</div>
+				</button>
 			) : (
 				<div className="relative group rounded-lg overflow-hidden border bg-background w-fit">
 					<img
@@ -335,7 +335,8 @@ const MultiImageUpload = ({
 				multiple={true}
 			/>
 
-			<div
+			<button
+				type="button"
 				onClick={() => setModalOpen(true)}
 				className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-neutral-300 rounded-lg cursor-pointer bg-muted/30 hover:bg-muted/60 transition-colors"
 			>
@@ -345,13 +346,13 @@ const MultiImageUpload = ({
 						Click to select multiple images
 					</p>
 				</div>
-			</div>
+			</button>
 
 			{images.length > 0 && (
 				<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
 					{images.map((image, index) => (
 						<div
-							key={`${image}-${index}`}
+							key={image}
 							className="relative group aspect-square rounded-lg overflow-hidden border bg-background"
 						>
 							<img

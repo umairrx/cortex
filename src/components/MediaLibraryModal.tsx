@@ -233,7 +233,6 @@ export function MediaLibraryModal({
 								)}
 							</ScrollArea>
 
-							{/* Bottom actions bar */}
 							<div className="absolute bottom-0 left-0 right-0 p-4 bg-background border-t flex justify-between items-center">
 								<div className="text-sm text-muted-foreground">
 									{selectedFiles.length} file

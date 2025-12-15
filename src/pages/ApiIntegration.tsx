@@ -212,7 +212,6 @@ export default function ApiIntegration() {
 			<ScrollArea className="h-[calc(100vh-200px)] min-h-0 overflow-auto">
 				<div className="p-6">
 					<div className="max-w-4xl mx-auto space-y-6">
-						{/* Status Overview */}
 						{connections.length > 0 ? (
 							<Card className="border-green-500/20 bg-green-500/5">
 								<CardHeader>
@@ -254,7 +253,8 @@ export default function ApiIntegration() {
 															)
 														: connections[0].config.connectionString
 															? (
-																	connections[0].config.connectionString as string
+																	connections[0].config
+																		.connectionString as string
 																).replace(/:\/\/.*@/, "://***:***@")
 															: (connections[0].config.url as string)}
 												</p>

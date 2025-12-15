@@ -99,7 +99,6 @@ export default function ContentCreate() {
 
 	return (
 		<div className="min-h-screen bg-background flex flex-col">
-			{/* Header */}
 			<header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur">
 				<div className="container flex h-16 items-center justify-between py-4">
 					<div className="flex items-center gap-4">
@@ -180,7 +179,6 @@ export default function ContentCreate() {
 				isLoading={createItemMutation.isPending}
 			/>
 
-			{/* Main Content */}
 			<main className="flex-1 container py-8 max-w-3xl mx-auto">
 				<div className="space-y-6 bg-card rounded-lg border p-6 shadow-sm">
 					{collection.fields.map((field) => (

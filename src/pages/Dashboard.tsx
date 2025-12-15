@@ -90,7 +90,6 @@ export default function Dashboard() {
 						<CardContent>
 							<ScrollArea className="h-75 w-full pr-4">
 								<div className="space-y-8 p-4">
-									{/* Placeholder for activity feed */}
 									<div className="flex items-center">
 										<Activity className="h-4 w-4 mr-4 text-muted-foreground" />
 										<div className="ml-4 space-y-1">

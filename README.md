@@ -13,6 +13,7 @@ The modern, intelligent dashboard for the Cortex CMS. Built with React 19, Vite,
 - **Real-time Updates**: Powered by TanStack Query.
 - **Dark Mode**: Built-in heavy/light mode switching.
 - **Responsive**: Fully mobile-responsive layout.
+- **Landing Page**: Public demo landing page available at `/` (no sign-in required).
 
 ## 🛠️ Tech Stack
 
@@ -26,12 +27,14 @@ The modern, intelligent dashboard for the Cortex CMS. Built with React 19, Vite,
 ## 📦 Installation
 
 1.  **Clone the repository**
+
     ```bash
     git clone https://github.com/umairrx/cortex.git
     cd cortex
     ```
 
 2.  **Install dependencies**
+
     ```bash
     pnpm install
     # or npm install
@@ -52,12 +55,12 @@ The modern, intelligent dashboard for the Cortex CMS. Built with React 19, Vite,
 
 ## 📜 Scripts
 
-| Script | Description |
-| :--- | :--- |
-| `pnpm dev` | Starts the Vite development server. |
-| `pnpm build` | Builds the application for production. |
-| `pnpm preview` | Locally preview the production build. |
-| `pnpm lint` | Runs ESLint and Biome checks. |
+| Script         | Description                            |
+| :------------- | :------------------------------------- |
+| `pnpm dev`     | Starts the Vite development server.    |
+| `pnpm build`   | Builds the application for production. |
+| `pnpm preview` | Locally preview the production build.  |
+| `pnpm lint`    | Runs ESLint and Biome checks.          |
 
 ## 🏗️ Project Structure
 
@@ -70,6 +73,7 @@ The modern, intelligent dashboard for the Cortex CMS. Built with React 19, Vite,
 ## 🚢 Deployment
 
 1.  Build the project:
+
     ```bash
     pnpm build
     ```
@@ -79,4 +83,3 @@ The modern, intelligent dashboard for the Cortex CMS. Built with React 19, Vite,
     - **Netlify**: Drag and drop `dist` folder.
     - **S3/CloudFront**: Upload static assets.
     - **Nginx**: Serve `dist` folder as static files.
-

@@ -15,6 +15,7 @@ import { Toaster } from "./components/ui/sonner.tsx";
 import { useTheme } from "./components/use-theme";
 import { AuthProvider } from "./contexts/AuthContext.tsx";
 import { CollectionsProvider } from "./contexts/CollectionsContext.tsx";
+import { LenisProvider } from "./contexts/LenisContext";
 import ApiIntegration from "./pages/ApiIntegration.tsx";
 import CollectionTypesBuilder from "./pages/CollectionTypesBuilder.tsx";
 import CollectionWrapper from "./pages/CollectionWrapper.tsx";
@@ -22,6 +23,8 @@ import ContentCreate from "./pages/ContentCreate.tsx";
 import ContentManager from "./pages/ContentManager.tsx";
 import CreateCollection from "./pages/CreateCollection.tsx";
 import Dashboard from "./pages/Dashboard.tsx";
+import Docs from "./pages/Docs";
+import Landing from "./pages/Landing.tsx";
 import MediaLibrary from "./pages/MediaLibrary.tsx";
 import SignIn from "./pages/SignIn.tsx";
 import SignUp from "./pages/SignUp.tsx";
@@ -65,6 +68,8 @@ function AppContent() {
 			/>
 			<Routes>
 				<Route path="/" element={<Layout />}>
+					<Route index element={<Landing />} />
+					<Route path="/docs" element={<Docs />} />
 					<Route index element={<Navigate to="/dashboard" replace />} />
 					<Route
 						path="/dashboard"
@@ -139,9 +144,11 @@ function App() {
 			<ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
 				<AuthProvider>
 					<CollectionsProvider>
-						<Router>
-							<AppContent />
-						</Router>
+						<LenisProvider>
+							<Router>
+								<AppContent />
+							</Router>
+						</LenisProvider>
 					</CollectionsProvider>
 				</AuthProvider>
 				<Toaster />

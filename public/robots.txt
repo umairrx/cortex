@@ -1,0 +1,6 @@
+# Robots.txt for Cortex CMS
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://cortex.umairrx.dev/sitemap.xml

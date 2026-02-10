@@ -2,10 +2,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { useEffect, useRef } from "react";
 import {
-	Navigate,
-	Route,
-	BrowserRouter as Router,
-	Routes,
+  Navigate,
+  Route,
+  BrowserRouter as Router,
+  Routes,
 } from "react-router-dom";
 import LoadingBar, { type LoadingBarRef } from "react-top-loading-bar";
 import Layout from "./components/Layout.tsx";
@@ -40,95 +40,95 @@ import SignUp from "./pages/SignUp.tsx";
 const queryClient = new QueryClient();
 
 function AppContent() {
-	const loadingBarRef = useRef<LoadingBarRef | null>(null);
-	const { theme } = useTheme();
+  const loadingBarRef = useRef<LoadingBarRef | null>(null);
+  const { theme } = useTheme();
 
-	useEffect(() => {
-		loadingBarRef.current?.continuousStart?.();
+  useEffect(() => {
+    loadingBarRef.current?.continuousStart?.();
 
-		const timer = setTimeout(() => {
-			loadingBarRef.current?.complete?.();
-		}, 500);
+    const timer = setTimeout(() => {
+      loadingBarRef.current?.complete?.();
+    }, 500);
 
-		return () => clearTimeout(timer);
-	}, []);
+    return () => clearTimeout(timer);
+  }, []);
 
-	const loadingBarColor = theme === "dark" ? "#64b5f6" : "#64b5f6";
+  const loadingBarColor = theme === "dark" ? "#64b5f6" : "#64b5f6";
 
-	return (
-		<>
-			<LoadingBar
-				ref={loadingBarRef}
-				color={loadingBarColor}
-				height={3}
-				shadow={true}
-				loaderSpeed={500}
-				waitingTime={200}
-				transitionTime={300}
-			/>
-			<Routes>
-				<Route path="/" element={<Layout />}>
-					<Route index element={<Landing />} />
-					<Route path="/docs" element={<Docs />} />
-					<Route index element={<Navigate to="/dashboard" replace />} />
-					<Route
-						path="/dashboard"
-						element={
-							<ProtectedRoute>
-								<Dashboard />
-							</ProtectedRoute>
-						}
-					/>
-					<Route
-						path="/content-manager"
-						element={
-							<ProtectedRoute>
-								<ContentManager />
-							</ProtectedRoute>
-						}
-					/>
-					<Route
-						path="/content-manager/:collectionId/create"
-						element={
-							<ProtectedRoute>
-								<ContentCreate />
-							</ProtectedRoute>
-						}
-					/>
-					<Route
-						path="/media-library"
-						element={
-							<ProtectedRoute>
-								<MediaLibrary />
-							</ProtectedRoute>
-						}
-					/>
-					<Route
-						path="/collection-types-builder"
-						element={
-							<ProtectedRoute>
-								<CollectionTypesBuilder />
-							</ProtectedRoute>
-						}
-					>
-						<Route index element={<CreateCollection />} />
-						<Route path=":id" element={<CollectionWrapper />} />
-					</Route>
-					<Route
-						path="/api-integration"
-						element={
-							<ProtectedRoute>
-								<ApiIntegration />
-							</ProtectedRoute>
-						}
-					/>
-				</Route>
-				<Route path="/signin" element={<SignIn />} />
-				<Route path="/signup" element={<SignUp />} />
-			</Routes>
-			<ReactQueryDevtools initialIsOpen={false} />
-		</>
-	);
+  return (
+    <>
+      <LoadingBar
+        ref={loadingBarRef}
+        color={loadingBarColor}
+        height={3}
+        shadow={true}
+        loaderSpeed={500}
+        waitingTime={200}
+        transitionTime={300}
+      />
+      <Routes>
+        <Route path="/" element={<Layout />}>
+          <Route index element={<Landing />} />
+          <Route path="/docs" element={<Docs />} />
+          <Route index element={<Navigate to="/dashboard" replace />} />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/content-manager"
+            element={
+              <ProtectedRoute>
+                <ContentManager />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/content-manager/:collectionId/create"
+            element={
+              <ProtectedRoute>
+                <ContentCreate />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/media-library"
+            element={
+              <ProtectedRoute>
+                <MediaLibrary />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/collection-types-builder"
+            element={
+              <ProtectedRoute>
+                <CollectionTypesBuilder />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<CreateCollection />} />
+            <Route path=":id" element={<CollectionWrapper />} />
+          </Route>
+          <Route
+            path="/api-integration"
+            element={
+              <ProtectedRoute>
+                <ApiIntegration />
+              </ProtectedRoute>
+            }
+          />
+        </Route>
+        <Route path="/signin" element={<SignIn />} />
+        <Route path="/signup" element={<SignUp />} />
+      </Routes>
+      <ReactQueryDevtools initialIsOpen={false} />
+    </>
+  );
 }
 
 /**
@@ -139,22 +139,22 @@ function AppContent() {
  * @returns The complete application with all providers and context layers
  */
 function App() {
-	return (
-		<QueryClientProvider client={queryClient}>
-			<ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-				<AuthProvider>
-					<CollectionsProvider>
-						<LenisProvider>
-							<Router>
-								<AppContent />
-							</Router>
-						</LenisProvider>
-					</CollectionsProvider>
-				</AuthProvider>
-				<Toaster />
-			</ThemeProvider>
-		</QueryClientProvider>
-	);
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider defaultTheme="amber" storageKey="vite-ui-theme">
+        <AuthProvider>
+          <CollectionsProvider>
+            <LenisProvider>
+              <Router>
+                <AppContent />
+              </Router>
+            </LenisProvider>
+          </CollectionsProvider>
+        </AuthProvider>
+        <Toaster />
+      </ThemeProvider>
+    </QueryClientProvider>
+  );
 }
 
 export default App;

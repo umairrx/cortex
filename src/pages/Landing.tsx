@@ -8,22 +8,22 @@ import { Problem } from "@/components/shared/Problem";
 import { Solution } from "@/components/shared/Solution";
 
 export default function Landing() {
-	return (
-		<div className="min-h-screen bg-background">
-			<Navbar />
-			<main>
-				<Hero />
-				<Problem />
-				<Solution />
-				<section id="features">
-					<Features />
-				</section>
-				<section id="how-it-works">
-					<HowItWorks />
-				</section>
-				<CTA />
-			</main>
-			<Footer />
-		</div>
-	);
+  return (
+    <div className="min-h-screen bg-background">
+      <Navbar />
+      <main>
+        <Hero />
+        <Problem />
+        <Solution />
+        <section id="features">
+          <Features />
+        </section>
+        <section id="how-it-works">
+          <HowItWorks />
+        </section>
+        <CTA />
+      </main>
+      <Footer />
+    </div>
+  );
 }

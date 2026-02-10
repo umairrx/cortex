@@ -2,10 +2,10 @@ import { Moon, Sun } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useTheme } from "./use-theme.ts";
 
@@ -17,52 +17,49 @@ import { useTheme } from "./use-theme.ts";
  * @returns A button with dropdown menu for theme selection
  */
 export function ModeToggle() {
-	const { theme, setTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
 
-	const getCurrentBase = (themeName: string | undefined) => {
-		if (!themeName) return "default";
-		if (themeName === "light" || themeName === "dark") return "default";
-		if (themeName === "system") return "default";
-		return themeName.endsWith("-dark")
-			? themeName.replace("-dark", "")
-			: themeName;
-	};
+  const getCurrentBase = (themeName: string | undefined) => {
+    if (!themeName) return "default";
+    if (themeName === "light" || themeName === "dark") return "default";
+    if (themeName === "system") return "default";
+    return themeName.endsWith("-dark")
+      ? themeName.replace("-dark", "")
+      : themeName;
+  };
 
-	const handleThemeChange = (mode: "light" | "dark" | "system") => {
-		if (mode === "system") {
-			setTheme("system");
-			return;
-		}
+  const handleThemeChange = (mode: "light" | "dark" | "system") => {
+    if (mode === "system") {
+      setTheme("system");
+      return;
+    }
 
-		const base = getCurrentBase(theme);
+    const base = getCurrentBase(theme);
 
-		if (base === "default") {
-			setTheme(mode);
-		} else {
-			setTheme(mode === "dark" ? `${base}-dark` : base);
-		}
-	};
+    if (base === "default") {
+      setTheme(mode);
+    } else {
+      setTheme(mode === "dark" ? `${base}-dark` : base);
+    }
+  };
 
-	return (
-		<DropdownMenu>
-			<DropdownMenuTrigger asChild>
-				<Button variant="outline" size="icon">
-					<Sun className="h-[1.2rem] w-[1.2rem] scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />
-					<Moon className="absolute h-[1.2rem] w-[1.2rem] scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0" />
-					<span className="sr-only">Toggle theme</span>
-				</Button>
-			</DropdownMenuTrigger>
-			<DropdownMenuContent align="end">
-				<DropdownMenuItem onClick={() => handleThemeChange("light")}>
-					Light
-				</DropdownMenuItem>
-				<DropdownMenuItem onClick={() => handleThemeChange("dark")}>
-					Dark
-				</DropdownMenuItem>
-				<DropdownMenuItem onClick={() => handleThemeChange("system")}>
-					System
-				</DropdownMenuItem>
-			</DropdownMenuContent>
-		</DropdownMenu>
-	);
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="icon">
+          <Sun className="h-[1.2rem] w-[1.2rem] scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />
+          <Moon className="absolute h-[1.2rem] w-[1.2rem] scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0" />
+          <span className="sr-only">Toggle theme</span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={() => handleThemeChange("light")}>
+          Light
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => handleThemeChange("dark")}>
+          Dark
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 }
